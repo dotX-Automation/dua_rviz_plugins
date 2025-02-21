@@ -36,12 +36,14 @@ set(CMAKE_AUTOMOC ON)
 qt5_wrap_cpp(MOC_FILES
   include/rviz_custom_plugins/button_panel.hpp
   include/rviz_custom_plugins/overlay_text_panel.hpp
+  include/rviz_custom_plugins/overlay_send_panel.hpp
   include/rviz_custom_plugins/visual_targets_display.hpp
 )
 
 add_library(rviz_custom_plugins SHARED
   src/rviz_custom_plugins/button_panel.cpp
   src/rviz_custom_plugins/overlay_text_panel.cpp
+  src/rviz_custom_plugins/overlay_send_panel.cpp
   src/rviz_custom_plugins/visual_targets_display.cpp
   ${MOC_FILES}
 )
@@ -87,6 +89,14 @@ install(FILES rviz_custom_plugins.xml
 install(FILES
   icons/classes/ButtonPanel.png icons/classes/OverlayTextPanel.png icons/classes/VisualTargetsDisplay.png
         DESTINATION share/${PROJECT_NAME}/icons/classes
+)
+
+install(DIRECTORY launch/
+        DESTINATION share/${PROJECT_NAME}/launch
+)
+
+install(DIRECTORY config/
+        DESTINATION share/${PROJECT_NAME}/config
 )
 
 ament_export_include_directories(include)
