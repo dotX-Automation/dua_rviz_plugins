@@ -19,6 +19,7 @@ OverlayTextPanel::OverlayTextPanel(QWidget * parent)
   topic_input_ = new QLineEdit("/messages");
   connect(topic_input_, &QLineEdit::editingFinished, this, &OverlayTextPanel::updateTopic);
 
+  // Create a label to display the message
   label_ = new QLabel("Waiting for message...");
   layout->addWidget(new QLabel("Topic:"));
   layout->addWidget(topic_input_);
@@ -31,6 +32,7 @@ OverlayTextPanel::OverlayTextPanel(QWidget * parent)
  */
 void OverlayTextPanel::onInitialize()
 {
+  // Call the base class implementation
   rviz_common::Panel::onInitialize();
 
   // Get the ROS node associated with RViz
@@ -74,6 +76,7 @@ void OverlayTextPanel::updateTopic()
   // Get the new topic name from the input field
   QString new_topic = topic_input_->text().trimmed();
 
+  // Check if the topic name has changed
   if (!new_topic.isEmpty() && new_topic != topic_name_) {
     // Unsubscribe from the current topic
     unsubscribe();
@@ -105,7 +108,8 @@ void OverlayTextPanel::callback(const std_msgs::msg::String::SharedPtr msg)
     {"COMPLETED", "#006400"}           // Dark green
   };
 
-  std::string color = "#000000";  // Default: black
+  // Set the default color
+  std::string color = "#000000";  // Black
   auto it = color_map.find(msg->data);
   if (it != color_map.end()) {
     color = it->second;
@@ -117,6 +121,7 @@ void OverlayTextPanel::callback(const std_msgs::msg::String::SharedPtr msg)
     .arg(20)
     .arg(msg->data.c_str());
 
+  // Update the label with the received message
   label_->setText(text);
 }
 
@@ -127,7 +132,10 @@ void OverlayTextPanel::callback(const std_msgs::msg::String::SharedPtr msg)
  */
 void OverlayTextPanel::save(rviz_common::Config config) const
 {
+  // Call the base class implementation
   rviz_common::Panel::save(config);
+
+  // Store the selected topic name
   config.mapSetValue("Topic", topic_name_);
 }
 
@@ -138,7 +146,10 @@ void OverlayTextPanel::save(rviz_common::Config config) const
  */
 void OverlayTextPanel::load(const rviz_common::Config & config)
 {
+  // Call the base class implementation
   rviz_common::Panel::load(config);
+
+  // Load the stored topic name
   QString topic;
   if (config.mapGetString("Topic", &topic)) {
     topic_input_->setText(topic);

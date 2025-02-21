@@ -68,9 +68,9 @@ private:
   void unsubscribe();
 
   /**
-   * @brief Callback function that updates the UI with the received message.
+   * @brief Callback function that updates the UI with the received boolean message.
    *
-   * @param msg The received message containing the text data.
+   * @param msg The received message containing the string data.
    */
   void callback(const std_msgs::msg::String::SharedPtr msg);
 
