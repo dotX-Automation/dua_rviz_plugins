@@ -1,9 +1,9 @@
-#include <rviz_custom_plugins/button_panel.hpp>
+#include <dua_rviz_plugins/start_stop_panel.hpp>
 
-namespace rviz_custom_plugins
+namespace dua_rviz_plugins
 {
 
-ButtonPanel::ButtonPanel(QWidget * parent)
+StartStopPanel::StartStopPanel(QWidget * parent)
 : rviz_common::Panel(parent)
 {
   // Initialize ROS2 node
@@ -34,7 +34,7 @@ ButtonPanel::ButtonPanel(QWidget * parent)
   setLayout(layout);
 }
 
-void ButtonPanel::startButtonClicked()
+void StartStopPanel::startButtonClicked()
 {
   // Publish empty message on the first topic
   std_msgs::msg::Empty empty_msg;
@@ -43,7 +43,7 @@ void ButtonPanel::startButtonClicked()
   }
 }
 
-void ButtonPanel::stopButtonClicked()
+void StartStopPanel::stopButtonClicked()
 {
   // Publish empty message on the second topic
   std_msgs::msg::Empty empty_msg;
@@ -52,7 +52,7 @@ void ButtonPanel::stopButtonClicked()
   }
 }
 
-}  // namespace rviz_custom_plugins
+}  // namespace dua_rviz_plugins
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(rviz_custom_plugins::ButtonPanel, rviz_common::Panel)
+PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::StartStopPanel, rviz_common::Panel)

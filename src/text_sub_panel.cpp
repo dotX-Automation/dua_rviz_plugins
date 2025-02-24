@@ -1,14 +1,9 @@
-#include <rviz_custom_plugins/overlay_text_panel.hpp>
+#include <dua_rviz_plugins/text_sub_panel.hpp>
 
-namespace rviz_custom_plugins
+namespace dua_rviz_plugins
 {
 
-/**
- * @brief Constructor for the OverlayTextPanel class.
- *
- * @param parent The parent widget.
- */
-OverlayTextPanel::OverlayTextPanel(QWidget * parent)
+TextSubPanel::TextSubPanel(QWidget * parent)
 : rviz_common::Panel(parent),
   topic_name_("/messages")
 {
@@ -17,7 +12,7 @@ OverlayTextPanel::OverlayTextPanel(QWidget * parent)
 
   // Connect signals and slots
   topic_input_ = new QLineEdit("/messages");
-  connect(topic_input_, &QLineEdit::editingFinished, this, &OverlayTextPanel::updateTopic);
+  connect(topic_input_, &QLineEdit::editingFinished, this, &TextSubPanel::updateTopic);
 
   // Create a label to display the message
   label_ = new QLabel("Waiting for message...");
@@ -27,10 +22,7 @@ OverlayTextPanel::OverlayTextPanel(QWidget * parent)
   setLayout(layout);
 }
 
-/**
- * @brief Initializes the panel when it is added to RViz.
- */
-void OverlayTextPanel::onInitialize()
+void TextSubPanel::onInitialize()
 {
   // Call the base class implementation
   rviz_common::Panel::onInitialize();
@@ -42,10 +34,7 @@ void OverlayTextPanel::onInitialize()
   subscribe();
 }
 
-/**
- * @brief Subscribes to the current topic and updates the UI.
- */
-void OverlayTextPanel::subscribe()
+void TextSubPanel::subscribe()
 {
   if (!topic_name_.isEmpty()) {
     RCLCPP_INFO(node_->get_logger(), "Subscribing to: %s", topic_name_.toStdString().c_str());
@@ -53,25 +42,19 @@ void OverlayTextPanel::subscribe()
     // Create a new subscription
     subscription_ = node_->create_subscription<std_msgs::msg::String>(
       topic_name_.toStdString(), 10,
-      std::bind(&OverlayTextPanel::callback, this, std::placeholders::_1));
+      std::bind(&TextSubPanel::callback, this, std::placeholders::_1));
 
     label_->setText("Subscribed to: " + topic_name_);
   }
 }
 
-/**
- * @brief Unsubscribes from the current topic to release resources.
- */
-void OverlayTextPanel::unsubscribe()
+void TextSubPanel::unsubscribe()
 {
   // Reset the subscription
   subscription_.reset();
 }
 
-/**
- * @brief Updates the topic subscription based on the user input.
- */
-void OverlayTextPanel::updateTopic()
+void TextSubPanel::updateTopic()
 {
   // Get the new topic name from the input field
   QString new_topic = topic_input_->text().trimmed();
@@ -88,12 +71,7 @@ void OverlayTextPanel::updateTopic()
   }
 }
 
-/**
- * @brief Callback function that updates the UI with the received message.
- *
- * @param msg The received message containing the text data.
- */
-void OverlayTextPanel::callback(const std_msgs::msg::String::SharedPtr msg)
+void TextSubPanel::callback(const std_msgs::msg::String::SharedPtr msg)
 {
   // Define the color for each message type
   static const std::map<std::string, std::string> color_map = {
@@ -125,12 +103,7 @@ void OverlayTextPanel::callback(const std_msgs::msg::String::SharedPtr msg)
   label_->setText(text);
 }
 
-/**
- * @brief Saves the panel configuration, including the selected topic.
- *
- * @param config The configuration object to store the topic name.
- */
-void OverlayTextPanel::save(rviz_common::Config config) const
+void TextSubPanel::save(rviz_common::Config config) const
 {
   // Call the base class implementation
   rviz_common::Panel::save(config);
@@ -139,12 +112,7 @@ void OverlayTextPanel::save(rviz_common::Config config) const
   config.mapSetValue("Topic", topic_name_);
 }
 
-/**
- * @brief Loads the panel configuration and restores the topic subscription.
- *
- * @param config The configuration object containing the stored topic name.
- */
-void OverlayTextPanel::load(const rviz_common::Config & config)
+void TextSubPanel::load(const rviz_common::Config & config)
 {
   // Call the base class implementation
   rviz_common::Panel::load(config);
@@ -157,7 +125,7 @@ void OverlayTextPanel::load(const rviz_common::Config & config)
   }
 }
 
-}  // namespace rviz_custom_plugins
+}  // namespace dua_rviz_plugins
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(rviz_custom_plugins::OverlayTextPanel, rviz_common::Panel)
+PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::TextSubPanel, rviz_common::Panel)

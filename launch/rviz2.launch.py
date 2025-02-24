@@ -5,7 +5,7 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     rviz_config_file = os.path.join(
-        get_package_share_directory('rviz_custom_plugins'), 'config', 'config.rviz'
+        get_package_share_directory('dua_rviz_plugins'), 'config', 'config.rviz'
     )
 
     return launch.LaunchDescription([

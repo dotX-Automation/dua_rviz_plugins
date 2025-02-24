@@ -26,13 +26,13 @@ Panels:
     Name: Time
     SyncMode: 0
     SyncSource: ""
-  - Class: OverlayTextPanel
-    Name: OverlayTextPanel
+  - Class: TextSubPanel
+    Name: TextSubPanel
     Topic: /messages
-  - Class: OverlaySendPanel
-    Name: OverlaySendPanel
-  - Class: ButtonPanel
-    Name: ButtonPanel
+  - Class: TextPubPanel
+    Name: TextPubPanel
+  - Class: StartStopPanel
+    Name: StartStopPanel
 Visualization Manager:
   Class: ""
   Displays:

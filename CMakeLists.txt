@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(rviz_custom_plugins)
+project(dua_rviz_plugins)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -34,29 +34,29 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOMOC ON)
 qt5_wrap_cpp(MOC_FILES
-  include/rviz_custom_plugins/button_panel.hpp
-  include/rviz_custom_plugins/overlay_text_panel.hpp
-  include/rviz_custom_plugins/overlay_send_panel.hpp
-  include/rviz_custom_plugins/visual_targets_display.hpp
+  include/dua_rviz_plugins/start_stop_panel.hpp
+  include/dua_rviz_plugins/text_sub_panel.hpp
+  include/dua_rviz_plugins/text_pub_panel.hpp
+  include/dua_rviz_plugins/visual_targets_display.hpp
 )
 
-add_library(rviz_custom_plugins SHARED
-  src/rviz_custom_plugins/button_panel.cpp
-  src/rviz_custom_plugins/overlay_text_panel.cpp
-  src/rviz_custom_plugins/overlay_send_panel.cpp
-  src/rviz_custom_plugins/visual_targets_display.cpp
+add_library(dua_rviz_plugins SHARED
+  src/start_stop_panel.cpp
+  src/text_sub_panel.cpp
+  src/text_pub_panel.cpp
+  src/visual_targets_display.cpp
   ${MOC_FILES}
 )
-target_include_directories(rviz_custom_plugins PUBLIC
+target_include_directories(dua_rviz_plugins PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(rviz_custom_plugins
+target_link_libraries(dua_rviz_plugins
   ${Qt5Widgets_LIBRARIES}
   ${Qt5Core_LIBRARIES}
   ${Qt5Gui_LIBRARIES}
 )
-ament_target_dependencies(rviz_custom_plugins
+ament_target_dependencies(dua_rviz_plugins
   dua_interfaces
   dua_qos_cpp
   interactive_markers
@@ -72,7 +72,7 @@ ament_target_dependencies(rviz_custom_plugins
   visualization_msgs
 )
 
-install(TARGETS rviz_custom_plugins
+install(TARGETS dua_rviz_plugins
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin
@@ -82,12 +82,12 @@ install(DIRECTORY include/
         DESTINATION include
 )
 
-install(FILES rviz_custom_plugins.xml
+install(FILES dua_rviz_plugins.xml
         DESTINATION share/${PROJECT_NAME}
 )
 
 install(FILES
-  icons/classes/ButtonPanel.png icons/classes/OverlayTextPanel.png icons/classes/VisualTargetsDisplay.png
+  icons/classes/StartStopPanel.png icons/classes/TextSubPanel.png icons/classes/TextPubPanel.png icons/classes/VisualTargetsDisplay.png
         DESTINATION share/${PROJECT_NAME}/icons/classes
 )
 
@@ -100,7 +100,7 @@ install(DIRECTORY config/
 )
 
 ament_export_include_directories(include)
-pluginlib_export_plugin_description_file(rviz_common rviz_custom_plugins.xml)
+pluginlib_export_plugin_description_file(rviz_common dua_rviz_plugins.xml)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

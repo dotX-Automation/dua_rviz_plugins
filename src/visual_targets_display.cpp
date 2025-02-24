@@ -1,4 +1,4 @@
-#include "rviz_custom_plugins/visual_targets_display.hpp"
+#include "dua_rviz_plugins/visual_targets_display.hpp"
 
 #include <memory>
 #include <string>
@@ -14,7 +14,7 @@
 
 #include <sensor_msgs/image_encodings.hpp>
 
-namespace rviz_custom_plugins
+namespace dua_rviz_plugins
 {
 
 VisualTargetsDisplay::VisualTargetsDisplay()
@@ -227,7 +227,7 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   mutex_.unlock();
 }
 
-}  // namespace rviz_custom_plugins
+}  // namespace dua_rviz_plugins
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(rviz_custom_plugins::VisualTargetsDisplay, rviz_common::Display)
+PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::VisualTargetsDisplay, rviz_common::Display)

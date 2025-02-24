@@ -1,5 +1,5 @@
-#ifndef RVIZ_CUSTOM_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
-#define RVIZ_CUSTOM_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
+#ifndef DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
+#define DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
 
 #include <algorithm>
 #include <memory>
@@ -23,7 +23,7 @@
 #include <dua_interfaces/msg/visual_targets.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
-namespace rviz_custom_plugins
+namespace dua_rviz_plugins
 {
 
 using geometry_msgs::msg::Pose;
@@ -60,6 +60,6 @@ private:
   std::mutex mutex_;
 };
 
-}  // namespace rviz_custom_plugins
+}  // namespace dua_rviz_plugins
 
-#endif  // RVIZ_CUSTOM_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
+#endif  // DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_

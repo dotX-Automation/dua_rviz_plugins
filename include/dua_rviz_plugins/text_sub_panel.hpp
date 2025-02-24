@@ -1,5 +1,5 @@
-#ifndef RVIZ_CUSTOM_PLUGINS__OVERLAY_TEXT_PANEL_HPP_
-#define RVIZ_CUSTOM_PLUGINS__OVERLAY_TEXT_PANEL_HPP_
+#ifndef DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
+#define DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
 
 #include <rviz_common/panel.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -13,23 +13,23 @@
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
 
-namespace rviz_custom_plugins
+namespace dua_rviz_plugins
 {
 
 /**
  * @brief Custom panel for displaying overlay text messages in RViz.
  */
-class OverlayTextPanel : public rviz_common::Panel
+class TextSubPanel : public rviz_common::Panel
 {
   Q_OBJECT
 
 public:
   /**
-   * @brief Constructor for OverlayTextPanel.
+   * @brief Constructor for TextSubPanel.
    *
    * @param parent The parent widget.
    */
-  OverlayTextPanel(QWidget * parent = nullptr);
+  TextSubPanel(QWidget * parent = nullptr);
 
   /**
    * @brief Initializes the panel when it is added to RViz.
@@ -84,6 +84,6 @@ private:
   QString topic_name_ = ""; /**< Stores the current topic name for subscriptions. */
 };
 
-}  // namespace rviz_custom_plugins
+}  // namespace dua_rviz_plugins
 
-#endif  // RVIZ_CUSTOM_PLUGINS__OVERLAY_TEXT_PANEL_HPP_
+#endif  // DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_

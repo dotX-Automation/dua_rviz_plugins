@@ -1,5 +1,5 @@
-#ifndef RVIZ_CUSTOM_PLUGINS__BUTTON_PANEL_HPP_
-#define RVIZ_CUSTOM_PLUGINS__BUTTON_PANEL_HPP_
+#ifndef DUA_RVIZ_PLUGINS__START_STOP_PANEL_HPP_
+#define DUA_RVIZ_PLUGINS__START_STOP_PANEL_HPP_
 
 #include <dua_qos_cpp/dua_qos.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -10,15 +10,15 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
-namespace rviz_custom_plugins
+namespace dua_rviz_plugins
 {
 
-class ButtonPanel : public rviz_common::Panel
+class StartStopPanel : public rviz_common::Panel
 {
   Q_OBJECT
 
 public:
-  ButtonPanel(QWidget * parent = nullptr);
+  StartStopPanel(QWidget * parent = nullptr);
 
 private Q_SLOTS:
   void startButtonClicked();
@@ -32,6 +32,6 @@ private:
   QPushButton * button_stop_;
 };
 
-} // namespace rviz_custom_plugins
+} // namespace dua_rviz_plugins
 
-#endif  // RVIZ_CUSTOM_PLUGINS__BUTTON_PANEL_HPP_
+#endif  // DUA_RVIZ_PLUGINS__START_STOP_HPP_

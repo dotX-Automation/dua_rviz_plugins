@@ -1,14 +1,9 @@
-#include <rviz_custom_plugins/overlay_send_panel.hpp>
+#include <dua_rviz_plugins/text_pub_panel.hpp>
 
-namespace rviz_custom_plugins
+namespace dua_rviz_plugins
 {
 
-/**
- * @brief Constructor for the OverlaySendPanel class.
- *
- * @param parent The parent widget.
- */
-OverlaySendPanel::OverlaySendPanel(QWidget * parent)
+TextPubPanel::TextPubPanel(QWidget * parent)
 : rviz_common::Panel(parent),
   topic_name_("/messages")
 {
@@ -18,7 +13,7 @@ OverlaySendPanel::OverlaySendPanel(QWidget * parent)
   // Create the input fields and buttons
   topic_label_ = new QLabel("Topic:");
   topic_input_ = new QLineEdit(topic_name_);
-  connect(topic_input_, &QLineEdit::editingFinished, this, &OverlaySendPanel::updateTopic);
+  connect(topic_input_, &QLineEdit::editingFinished, this, &TextPubPanel::updateTopic);
 
   // Create the message input field
   message_input_ = new QLineEdit();
@@ -26,7 +21,7 @@ OverlaySendPanel::OverlaySendPanel(QWidget * parent)
 
   // Create the send button
   send_button_ = new QPushButton("PUBLISH");
-  connect(send_button_, &QPushButton::clicked, this, &OverlaySendPanel::sendMessage);
+  connect(send_button_, &QPushButton::clicked, this, &TextPubPanel::sendMessage);
   send_button_->setStyleSheet("color: black; font-weight: bold;");
 
   // Create the status label
@@ -42,10 +37,7 @@ OverlaySendPanel::OverlaySendPanel(QWidget * parent)
   setLayout(layout);
 }
 
-/**
- * @brief Initializes the panel when it is added to RViz.
- */
-void OverlaySendPanel::onInitialize()
+void TextPubPanel::onInitialize()
 {
   // Call the base class implementation
   rviz_common::Panel::onInitialize();
@@ -54,10 +46,7 @@ void OverlaySendPanel::onInitialize()
   node_ = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 }
 
-/**
- * @brief Updates the topic name and creates a new publisher if necessary.
- */
-void OverlaySendPanel::updateTopic()
+void TextPubPanel::updateTopic()
 {
   // Get the new topic name
   QString new_topic = topic_input_->text().trimmed();
@@ -69,10 +58,7 @@ void OverlaySendPanel::updateTopic()
   }
 }
 
-/**
- * @brief Sends the message to the selected topic.
- */
-void OverlaySendPanel::sendMessage()
+void TextPubPanel::sendMessage()
 {
   // Check if the node is valid
   if (!node_) return;
@@ -91,7 +77,7 @@ void OverlaySendPanel::sendMessage()
   status_label_->setText("Message sent to " + topic_name_);
 }
 
-}  // namespace rviz_custom_plugins
+}  // namespace dua_rviz_plugins
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(rviz_custom_plugins::OverlaySendPanel, rviz_common::Panel)
+PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::TextPubPanel, rviz_common::Panel)
