@@ -15,7 +15,7 @@ TextSubPanel::TextSubPanel(QWidget * parent)
   connect(topic_input_, &QLineEdit::editingFinished, this, &TextSubPanel::updateTopic);
 
   // Create a label to display the message
-  label_ = new QLabel("Waiting for message...");
+  label_ = new QLabel("Waiting for messages");
   layout->addWidget(new QLabel("Topic:"));
   layout->addWidget(topic_input_);
   layout->addWidget(label_);
@@ -30,6 +30,19 @@ void TextSubPanel::onInitialize()
   // Get the ROS node associated with RViz
   node_ = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
+  // Carica la mappa dei colori da file YAML
+  std::string pkg_share_dir_ = ament_index_cpp::get_package_share_directory("dua_rviz_plugins");
+  std::string yaml_file_ = pkg_share_dir_ + "/config/colors.yaml";
+
+  // Load the color configuration from a YAML file
+  YAML::Node config_ = YAML::LoadFile(yaml_file_);
+
+  for (auto it = config_.begin(); it != config_.end(); ++it) {
+    std::string key_ = it->first.as<std::string>();
+    std::string value_ = it->second.as<std::string>();
+    color_map_[key_] = value_;
+  }
+
   // Subscribe to the initial topic
   subscribe();
 }
@@ -37,7 +50,6 @@ void TextSubPanel::onInitialize()
 void TextSubPanel::subscribe()
 {
   if (!topic_name_.isEmpty()) {
-    RCLCPP_INFO(node_->get_logger(), "Subscribing to: %s", topic_name_.toStdString().c_str());
 
     // Create a new subscription
     subscription_ = node_->create_subscription<std_msgs::msg::String>(
@@ -73,29 +85,18 @@ void TextSubPanel::updateTopic()
 
 void TextSubPanel::callback(const std_msgs::msg::String::SharedPtr msg)
 {
-  // Define the color for each message type
-  static const std::map<std::string, std::string> color_map = {
-    {"EMERGENCY_LANDING", "#8b0000"},  // Dark red
-    {"RTB", "#8b0000"},                // Dark red
-    {"TAKEOFF", "#feb000"},            // Dark yellow
-    {"ARM", "#feb000"},                // Dark yellow
-    {"DISARM", "#feb000"},             // Dark yellow
-    {"EXPLORE", "#00008b"},            // Dark blue
-    {"TRACK", "#008b8b"},              // Dark cyan
-    {"FOLLOWME", "#cc8400"},           // Dark orange
-    {"COMPLETED", "#006400"}           // Dark green
-  };
-
   // Set the default color
-  std::string color = "#000000";  // Black
-  auto it = color_map.find(msg->data);
-  if (it != color_map.end()) {
-    color = it->second;
+  std::string color_ = "#000000";  // Black
+
+  // Check if the message type has a specific color
+  auto it = color_map_.find(msg->data);
+  if (it != color_map_.end()) {
+    color_ = it->second;
   }
 
   // Set the text color and size
   QString text = QString("<font color='%1' style='font-size:%2px;'>%3</font>")
-    .arg(color.c_str())
+    .arg(color_.c_str())
     .arg(20)
     .arg(msg->data.c_str());
 

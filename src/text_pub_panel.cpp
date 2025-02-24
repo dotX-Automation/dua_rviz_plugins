@@ -17,7 +17,7 @@ TextPubPanel::TextPubPanel(QWidget * parent)
 
   // Create the message input field
   message_input_ = new QLineEdit();
-  message_input_->setPlaceholderText("Enter message...");
+  message_input_->setPlaceholderText("Enter message");
 
   // Create the send button
   send_button_ = new QPushButton("PUBLISH");
@@ -25,7 +25,7 @@ TextPubPanel::TextPubPanel(QWidget * parent)
   send_button_->setStyleSheet("color: black; font-weight: bold;");
 
   // Create the status label
-  status_label_ = new QLabel("Ready to publish.");
+  status_label_ = new QLabel("Ready to publish");
 
   // Add the elements to the layout
   layout->addWidget(topic_label_);
@@ -71,10 +71,10 @@ void TextPubPanel::sendMessage()
   // Publish the message
   auto msg = std_msgs::msg::String();
   msg.data = message_input_->text().toStdString();
-  publisher_->publish(msg);
-
-  // Update the status label
-  status_label_->setText("Message sent to " + topic_name_);
+  if (!msg.data.empty()) {
+    publisher_->publish(msg);
+    status_label_->setText("Message sent to " + topic_name_);
+  }
 }
 
 }  // namespace dua_rviz_plugins

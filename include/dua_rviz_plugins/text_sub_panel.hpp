@@ -2,6 +2,9 @@
 #define DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
 
 #include <rviz_common/panel.hpp>
+#include <rviz_common/display_context.hpp>
+#include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
+
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 
@@ -10,8 +13,8 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
-#include <rviz_common/display_context.hpp>
-#include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <yaml-cpp/yaml.h>
 
 namespace dua_rviz_plugins
 {
@@ -82,6 +85,8 @@ private:
   rclcpp::Node::SharedPtr node_; /**< Shared pointer to the ROS 2 node used for communication. */
 
   QString topic_name_ = ""; /**< Stores the current topic name for subscriptions. */
+
+  std::map<std::string, std::string> color_map_; /**< Static map loaded from yaml. >*/
 };
 
 }  // namespace dua_rviz_plugins

@@ -4,34 +4,53 @@ namespace dua_rviz_plugins
 {
 
 StartStopPanel::StartStopPanel(QWidget * parent)
-: rviz_common::Panel(parent)
+: rviz_common::Panel(parent),
+  topic_start_name_("/start"),
+  topic_stop_name_("/stop")
 {
   // Initialize ROS2 node
   node_ = std::make_shared<rclcpp::Node>("rviz_button_node");
 
   // Create publishers for two different topics
   publisher_start_ = node_->create_publisher<std_msgs::msg::Empty>(
-    "/start",
+    topic_start_name_.toStdString(),
     dua_qos::Reliable::get_datum_qos());
   publisher_stop_ = node_->create_publisher<std_msgs::msg::Empty>(
-    "/stop",
+    topic_stop_name_.toStdString(),
     dua_qos::Reliable::get_datum_qos());
 
-  // Create the first button
+  // Create the UI elements for start topic
+  QLabel* label_start = new QLabel("Start Topic:", this);
+  topic_start_input_ = new QLineEdit(topic_start_name_, this);
+  connect(topic_start_input_, &QLineEdit::editingFinished, this, &StartStopPanel::updateStartTopic);
   button_start_ = new QPushButton("START", this);
-  connect(button_start_, SIGNAL(clicked()), this, SLOT(startButtonClicked()));
+  connect(button_start_, &QPushButton::clicked, this, &StartStopPanel::startButtonClicked);
   button_start_->setStyleSheet("color: green; font-weight: bold;");
 
-  // Create the second button
+  // Create the UI elements for stop topic
+  QLabel* label_stop = new QLabel("Stop Topic:", this);
+  topic_stop_input_ = new QLineEdit(topic_stop_name_, this);
+  connect(topic_stop_input_, &QLineEdit::editingFinished, this, &StartStopPanel::updateStopTopic);
   button_stop_ = new QPushButton("STOP", this);
-  connect(button_stop_, SIGNAL(clicked()), this, SLOT(stopButtonClicked()));
+  connect(button_stop_, &QPushButton::clicked, this, &StartStopPanel::stopButtonClicked);
   button_stop_->setStyleSheet("color: red; font-weight: bold;");
 
-  // Arrange the buttons vertically
-  auto layout = new QHBoxLayout();
-  layout->addWidget(button_start_);
-  layout->addWidget(button_stop_);
-  setLayout(layout);
+  // Arrange the widgets in layouts
+  auto mainLayout = new QVBoxLayout();
+
+  auto startLayout = new QHBoxLayout();
+  startLayout->addWidget(label_start);
+  startLayout->addWidget(topic_start_input_);
+  startLayout->addWidget(button_start_);
+
+  auto stopLayout = new QHBoxLayout();
+  stopLayout->addWidget(label_stop);
+  stopLayout->addWidget(topic_stop_input_);
+  stopLayout->addWidget(button_stop_);
+
+  mainLayout->addLayout(startLayout);
+  mainLayout->addLayout(stopLayout);
+  setLayout(mainLayout);
 }
 
 void StartStopPanel::startButtonClicked()
@@ -49,6 +68,32 @@ void StartStopPanel::stopButtonClicked()
   std_msgs::msg::Empty empty_msg;
   for (int i = 0; i < 10; i++) {
     publisher_stop_->publish(empty_msg);
+  }
+}
+
+void StartStopPanel::updateStartTopic()
+{
+  // Update the topic name if it has changed
+  QString new_topic = topic_start_input_->text().trimmed();
+  if (!new_topic.isEmpty() && new_topic != topic_start_name_) {
+    topic_start_name_ = new_topic;
+    publisher_start_.reset();
+    publisher_start_ = node_->create_publisher<std_msgs::msg::Empty>(
+      topic_start_name_.toStdString(),
+      dua_qos::Reliable::get_datum_qos());
+  }
+}
+
+void StartStopPanel::updateStopTopic()
+{
+  // Update the topic name if it has changed
+  QString new_topic = topic_stop_input_->text().trimmed();
+  if (!new_topic.isEmpty() && new_topic != topic_stop_name_) {
+    topic_stop_name_ = new_topic;
+    publisher_stop_.reset();
+    publisher_stop_ = node_->create_publisher<std_msgs::msg::Empty>(
+      topic_stop_name_.toStdString(),
+      dua_qos::Reliable::get_datum_qos());
   }
 }
 

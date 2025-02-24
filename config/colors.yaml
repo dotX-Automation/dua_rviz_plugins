@@ -1,0 +1,9 @@
+EMERGENCY_LANDING: "#8b0000" # Dark red
+RTB: "#8b0000"               # Dark red
+TAKEOFF: "#feb000"           # Dark yellow
+ARM: "#feb000"               # Dark yellow
+DISARM: "#feb000"            # Dark yellow
+EXPLORE: "#00008b"           # Dark blue
+TRACK: "#008b8b"             # Dark cyan
+FOLLOWME: "#cc8400"          # Dark orange
+COMPLETED: "#006400"         # Dark green

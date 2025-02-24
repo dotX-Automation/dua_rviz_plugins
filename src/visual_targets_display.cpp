@@ -14,6 +14,9 @@
 
 #include <sensor_msgs/image_encodings.hpp>
 
+// TODO: add comments
+// TODO: fix code
+
 namespace dua_rviz_plugins
 {
 

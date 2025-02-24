@@ -16,6 +16,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(yaml-cpp REQUIRED)
 find_package(dua_interfaces REQUIRED)
 find_package(dua_qos_cpp REQUIRED)
 find_package(interactive_markers REQUIRED)
@@ -55,6 +56,7 @@ target_link_libraries(dua_rviz_plugins
   ${Qt5Widgets_LIBRARIES}
   ${Qt5Core_LIBRARIES}
   ${Qt5Gui_LIBRARIES}
+  yaml-cpp
 )
 ament_target_dependencies(dua_rviz_plugins
   dua_interfaces

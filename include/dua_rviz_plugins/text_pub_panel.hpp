@@ -2,6 +2,7 @@
 #define DUA_RVIZ_PLUGINS__TEXT_PUB_PANEL_HPP_
 
 #include <rviz_common/panel.hpp>
+
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 
@@ -48,16 +49,16 @@ private Q_SLOTS:
   void sendMessage();
 
 private:
-  rclcpp::Node::SharedPtr node_; // The ROS node
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_; // The publisher
+  rclcpp::Node::SharedPtr node_; /**< The ROS node. >*/
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_; /**< The publisher. >*/
 
-  QLabel * topic_label_; // Label for the topic input
-  QLabel * status_label_; // Label for the publication status
-  QLineEdit * topic_input_; // Input for the topic name
-  QLineEdit * message_input_; // Input for the message
-  QPushButton * send_button_; // Button to send the message
+  QLabel * topic_label_; /**< Label for the topic input. >*/
+  QLabel * status_label_; /**< Label for the publication status. >*/
+  QLineEdit * topic_input_; /**< Input for the topic name. >*/
+  QLineEdit * message_input_; /**< Input for the message. >*/
+  QPushButton * send_button_; /**< Button to send the message. >*/
 
-  QString topic_name_ = "/messages"; // The selected topic name
+  QString topic_name_ = "/messages"; /**< The selected topic name. >*/
 };
 
 }  // namespace dua_rviz_plugins
