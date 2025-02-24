@@ -5,3 +5,7 @@ log/*
 
 # Uncomment the following to avoid pushing personal configurations
 .vscode/
+
+# Test folders
+config/config.rviz
+launch/*
