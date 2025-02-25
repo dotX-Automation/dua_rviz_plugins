@@ -9,3 +9,4 @@ log/*
 # Test folders
 config/config.rviz
 launch/*
+dae/*
