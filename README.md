@@ -1,10 +1,6 @@
 # dua_rviz_plugins
 
-C++ base class library that extends the base rviz_common::Panel providing direct and easy access to the dua_utils library features.
-
-## DUA integration
-
-See [`dua-template.md`](dua-template.md) for more information.
+Collection of C++ plugins for RViz visualization integrated with the DUA framework.
 
 ---
 

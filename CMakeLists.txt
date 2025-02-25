@@ -15,6 +15,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+# Find packages
 find_package(ament_cmake REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(dua_interfaces REQUIRED)
@@ -41,11 +42,9 @@ qt5_wrap_cpp(MOC_FILES
   include/dua_rviz_plugins/visual_targets_display.hpp
 )
 
+FILE(GLOB_RECURSE PLUGIN_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/*.cpp)
 add_library(dua_rviz_plugins SHARED
-  src/start_stop_panel.cpp
-  src/text_sub_panel.cpp
-  src/text_pub_panel.cpp
-  src/visual_targets_display.cpp
+  ${PLUGIN_SOURCES}
   ${MOC_FILES}
 )
 target_include_directories(dua_rviz_plugins PUBLIC
@@ -88,17 +87,10 @@ install(FILES dua_rviz_plugins.xml
         DESTINATION share/${PROJECT_NAME}
 )
 
+file(GLOB ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} icons/*)
 install(FILES
-  icons/classes/StartStopPanel.png icons/classes/TextSubPanel.png icons/classes/TextPubPanel.png icons/classes/VisualTargetsDisplay.png
-        DESTINATION share/${PROJECT_NAME}/icons/classes
-)
-
-install(DIRECTORY launch/
-        DESTINATION share/${PROJECT_NAME}/launch
-)
-
-install(DIRECTORY config/
-        DESTINATION share/${PROJECT_NAME}/config
+  ${ICON_FILES}
+  DESTINATION share/${PROJECT_NAME}/icons/classes
 )
 
 ament_export_include_directories(include)
