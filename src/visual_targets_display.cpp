@@ -1,8 +1,7 @@
 /**
- * Implementation of RViz2 VisualTargetsDisplay for DUA modules.
+ * VisualTargetsDisplay class source file.
  *
- * Alessandro Tenaglia <a.tenaglia@dotxautomation.com>
- * Alexandru Cretu <a.cretu@dotxautomation.com>
+ * dotX Automation <info@dotxautomation.com>
  *
  *  February 17, 2025
  */
@@ -49,7 +48,8 @@ void VisualTargetsDisplay::onInitialize()
   auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
   auto node = ros_node_abstraction->get_raw_node();
   server_ = std::make_shared<interactive_markers::InteractiveMarkerServer>(
-    "visual_targets", node);
+    "visual_targets",
+    node);
 }
 
 void VisualTargetsDisplay::processMessage(dua_interfaces::msg::VisualTargets::ConstSharedPtr msg)
@@ -75,7 +75,9 @@ void VisualTargetsDisplay::processMessage(dua_interfaces::msg::VisualTargets::Co
     const auto & id = entry.first;
     const Info & infos = entry.second[0];
     const Pose & pose = std::get<1>(infos);
-    createInteractiveMarker(pose, id);
+    createInteractiveMarker(
+      pose,
+      id);
   }
   // Update the server
   server_->applyChanges();
@@ -140,7 +142,10 @@ void VisualTargetsDisplay::createInteractiveMarker(
   // Insert the interactive marker into the server and set the callback
   server_->insert(
     int_marker,
-    std::bind(&VisualTargetsDisplay::processFeedback, this, std::placeholders::_1, id));
+    std::bind(&VisualTargetsDisplay::processFeedback,
+      this,
+      std::placeholders::_1,
+      id));
 }
 
 void VisualTargetsDisplay::processFeedback(
@@ -164,13 +169,16 @@ void VisualTargetsDisplay::showImage(const std::string & id)
 
   // Create a dialog to display the images
   QDialog * dialog = new QDialog();
+
   // Ensure the dialog is deleted when closed
   dialog->setAttribute(Qt::WA_DeleteOnClose);
+
   // Set the dialog title using the class_id in bold, uppercase and larger font
   std::string class_id = id;
   std::replace(class_id.begin(), class_id.end(), '_', ' ');
   std::transform(class_id.begin(), class_id.end(), class_id.begin(), ::toupper);
   dialog->setWindowTitle(QString::fromStdString(class_id));
+
   // Create a layout to display the images
   const Infos & infos = map_[id];
 
@@ -187,6 +195,7 @@ void VisualTargetsDisplay::showImage(const std::string & id)
     const sensor_msgs::msg::Image & image = std::get<2>(info);
     QImage qimage;
     const auto & encoding = image.encoding;
+
     // Convert the image data to QImage
     if (encoding == sensor_msgs::image_encodings::RGB8) {
       qimage = QImage(
@@ -232,17 +241,20 @@ void VisualTargetsDisplay::showImage(const std::string & id)
     agent_label->setText(QString::fromStdString(std::get<0>(info)));
     agent_label->setAlignment(Qt::AlignCenter);
     layout->addWidget(agent_label);
+
     // Create a label to display the image
     QLabel * image_label = new QLabel(dialog);
     image_label->setPixmap(QPixmap::fromImage(qimage));
     image_label->setAlignment(Qt::AlignCenter);
     layout->addWidget(image_label);
+
     // Add the layout to the main layout
     main_layout->addLayout(layout);
   }
 
   // Set the layout for the dialog
   dialog->setLayout(main_layout);
+
   // Show the dialog
   dialog->show();
 

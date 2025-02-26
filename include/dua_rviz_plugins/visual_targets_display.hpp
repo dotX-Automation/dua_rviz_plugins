@@ -1,8 +1,7 @@
 /**
- * Reference of RViz2 VisualTargetsDisplay for DUA modules.
+ * VisualTargetsDisplay header file.
  *
- * Alessandro Tenaglia <a.tenaglia@dotxautomation.com>
- * Alexandru Cretu <a.cretu@dotxautomation.com>
+ * dotX Automation <info@dotxautomation.com>
  *
  *  February 17, 2025
  */
@@ -110,10 +109,10 @@ private:
    */
   void showImage(const std::string & id);
 
-  std::string frame_id_; //*< The frame ID of the visual targets. >*/
-  std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_; //*< The interactive marker server. >*/
-  std::unordered_map<std::string, Infos> map_; /**< The frame ID of map. >*/
-  std::mutex mutex_; //*< The mutex to protect the map. >*/
+  std::string frame_id_;
+  std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
+  std::unordered_map<std::string, Infos> map_;
+  std::mutex mutex_;
 };
 
 }  // namespace dua_rviz_plugins

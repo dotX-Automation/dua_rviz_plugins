@@ -22,13 +22,16 @@
  * limitations under the License.
  */
 
-#pragma once
+ #ifndef DUA_RVIZ_PLUGINS__START_STOP_PANEL_HPP_
+ #define DUA_RVIZ_PLUGINS__START_STOP_PANEL_HPP_
 
 // DUA libraries
 #include <dua_qos_cpp/dua_qos.hpp>
+
 // ROS2 libraries
 #include <rclcpp/rclcpp.hpp>
 #include <rviz_common/panel.hpp>
+
 // Qt libraries
 #include <QPushButton>
 #include <QHBoxLayout>
@@ -63,13 +66,17 @@ public:
 private Q_SLOTS:
   /**
    * @brief Initializes the publisher for the start button.
+   *
+   * @param start_topic_str The name of the start topic.
    */
-  void init_start_pub(const std::string & start_topic_);
+  void init_start_pub(const std::string & start_topic_str);
 
   /**
    * @brief Initializes the publisher for the stop button.
+   *
+   * @param stop_topic_str The name of the stop topic.
    */
-  void init_stop_pub(const std::string & stop_topic_);
+  void init_stop_pub(const std::string & stop_topic_str);
 
   /**
    * @brief Publishes an empty message to the start topic.
@@ -102,3 +109,5 @@ private:
 };
 
 } // namespace dua_rviz_plugins
+
+#endif  // DUA_RVIZ_PLUGINS__START_STOP_PANEL_HPP_

@@ -1,8 +1,7 @@
 /**
- * Implementation of RViz2 TextPubPanel for DUA modules.
+ * TextPubPanel class source file.
  *
- * Alessandro Tenaglia <a.tenaglia@dotxautomation.com>
- * Alexandru Cretu <a.cretu@dotxautomation.com>
+ * dotX Automation <info@dotxautomation.com>
  *
  *  February 17, 2025
  */
@@ -38,7 +37,10 @@ TextPubPanel::TextPubPanel(QWidget * parent)
   // Create the input fields and buttons
   topic_label_ = new QLabel("Topic:");
   topic_input_ = new QLineEdit(topic_name_);
-  connect(topic_input_, &QLineEdit::editingFinished, this, &TextPubPanel::updateTopic);
+  connect(topic_input_,
+    &QLineEdit::editingFinished,
+    this,
+    &TextPubPanel::updateTopic);
 
   // Create the message input field
   message_input_ = new QLineEdit();
@@ -46,8 +48,11 @@ TextPubPanel::TextPubPanel(QWidget * parent)
 
   // Create the send button
   send_button_ = new QPushButton("PUBLISH");
-  connect(send_button_, &QPushButton::clicked, this, &TextPubPanel::sendMessage);
   send_button_->setStyleSheet("color: black; font-weight: bold;");
+  connect(send_button_,
+    &QPushButton::clicked,
+    this,
+    &TextPubPanel::sendMessage);
 
   // Create the status label
   status_label_ = new QLabel("Ready to publish");
@@ -90,7 +95,9 @@ void TextPubPanel::sendMessage()
 
   // Create a new publisher if necessary
   if (!publisher_) {
-    publisher_ = node_->create_publisher<std_msgs::msg::String>(topic_name_.toStdString(), 10);
+    publisher_ = node_->create_publisher<std_msgs::msg::String>(
+      topic_name_.toStdString(),
+      PUB_QUEUE_SIZE);
   }
 
   // Publish the message

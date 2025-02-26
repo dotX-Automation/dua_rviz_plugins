@@ -1,8 +1,7 @@
 /**
- * Implementation of RViz2 TextSubPanel for DUA modules.
+ * TextSubPanel class source file.
  *
- * Alessandro Tenaglia <a.tenaglia@dotxautomation.com>
- * Alexandru Cretu <a.cretu@dotxautomation.com>
+ * dotX Automation <info@dotxautomation.com>
  *
  *  February 17, 2025
  */
@@ -37,7 +36,10 @@ TextSubPanel::TextSubPanel(QWidget * parent)
 
   // Connect signals and slots
   topic_input_ = new QLineEdit("/messages");
-  connect(topic_input_, &QLineEdit::editingFinished, this, &TextSubPanel::updateTopic);
+  connect(topic_input_,
+    &QLineEdit::editingFinished,
+    this,
+    &TextSubPanel::updateTopic);
 
   // Create a label to display the message
   label_ = new QLabel("Waiting for messages");
@@ -56,16 +58,16 @@ void TextSubPanel::onInitialize()
   node_ = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
   // Carica la mappa dei colori da file YAML
-  std::string pkg_share_dir_ = ament_index_cpp::get_package_share_directory("dua_rviz_plugins");
-  std::string yaml_file_ = pkg_share_dir_ + "/config/colors.yaml";
+  std::string pkg_share_dir = ament_index_cpp::get_package_share_directory("dua_rviz_plugins");
+  std::string yaml_file = pkg_share_dir + "/config/colors.yaml";
 
   // Load the color configuration from a YAML file
-  YAML::Node config_ = YAML::LoadFile(yaml_file_);
+  YAML::Node config = YAML::LoadFile(yaml_file);
 
-  for (auto it = config_.begin(); it != config_.end(); ++it) {
-    std::string key_ = it->first.as<std::string>();
-    std::string value_ = it->second.as<std::string>();
-    color_map_[key_] = value_;
+  for (auto it = config.begin(); it != config.end(); ++it) {
+    std::string key = it->first.as<std::string>();
+    std::string value = it->second.as<std::string>();
+    color_map_[key] = value;
   }
 
   // Subscribe to the initial topic
@@ -78,8 +80,11 @@ void TextSubPanel::subscribe()
 
     // Create a new subscription
     subscription_ = node_->create_subscription<std_msgs::msg::String>(
-      topic_name_.toStdString(), 10,
-      std::bind(&TextSubPanel::callback, this, std::placeholders::_1));
+      topic_name_.toStdString(),
+      SUB_QUEUE_SIZE,
+      std::bind(&TextSubPanel::callback,
+        this,
+        std::placeholders::_1));
 
     label_->setText("Subscribed to: " + topic_name_);
   }
@@ -111,18 +116,18 @@ void TextSubPanel::updateTopic()
 void TextSubPanel::callback(const std_msgs::msg::String::SharedPtr msg)
 {
   // Set the default color
-  std::string color_ = "#000000";  // Black
+  std::string color = "#000000";  // Black
 
   // Check if the message type has a specific color
   auto it = color_map_.find(msg->data);
   if (it != color_map_.end()) {
-    color_ = it->second;
+    color = it->second;
   }
 
   // Set the text color and size
   QString text = QString("<font color='%1' style='font-size:%2px;'>%3</font>")
-    .arg(color_.c_str())
-    .arg(20)
+    .arg(color.c_str())
+    .arg(TEXT_SIZE)
     .arg(msg->data.c_str());
 
   // Update the label with the received message

@@ -1,8 +1,7 @@
 /**
- * Reference of RViz2 TextPubPanel for DUA modules.
+ * TextPubPanel header file.
  *
- * Alessandro Tenaglia <a.tenaglia@dotxautomation.com>
- * Alexandru Cretu <a.cretu@dotxautomation.com>
+ * dotX Automation <info@dotxautomation.com>
  *
  *  February 17, 2025
  */
@@ -23,24 +22,30 @@
  * limitations under the License.
  */
 
-#ifndef DUA_RVIZ_PLUGINS__TEXT_PUB_PANEL_HPP_
-#define DUA_RVIZ_PLUGINS__TEXT_PUB_PANEL_HPP_
+ #ifndef DUA_RVIZ_PLUGINS__TEXT_PUB_PANEL_HPP_
+ #define DUA_RVIZ_PLUGINS__TEXT_PUB_PANEL_HPP_
 
+ // ROS2 libraries
+ #include <rclcpp/rclcpp.hpp>
 #include <rviz_common/panel.hpp>
+#include <rviz_common/display_context.hpp>
+#include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
 
-#include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/string.hpp>
-
+// Qt libraries
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
 
-#include <rviz_common/display_context.hpp>
-#include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
+// Messages
+#include <std_msgs/msg/string.hpp>
+
+#define PUB_QUEUE_SIZE 10
 
 namespace dua_rviz_plugins
 {
+
+using std_msgs::msg::String;
 
 /**
  * @brief Custom panel for sending overlay text messages in RViz.
@@ -51,7 +56,7 @@ class TextPubPanel : public rviz_common::Panel
 
 public:
   /**
-   * @brief Constructor for TextPubPanel.
+   * @brief Constructor.
    *
    * @param parent The parent widget.
    */
@@ -74,16 +79,14 @@ private Q_SLOTS:
   void sendMessage();
 
 private:
-  rclcpp::Node::SharedPtr node_; /**< The ROS node. >*/
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_; /**< The publisher. >*/
-
-  QLabel * topic_label_; /**< Label for the topic input. >*/
-  QLabel * status_label_; /**< Label for the publication status. >*/
-  QLineEdit * topic_input_; /**< Input for the topic name. >*/
-  QLineEdit * message_input_; /**< Input for the message. >*/
-  QPushButton * send_button_; /**< Button to send the message. >*/
-
-  QString topic_name_ = "/messages"; /**< The selected topic name. >*/
+  rclcpp::Node::SharedPtr node_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
+  QLabel * topic_label_;
+  QLabel * status_label_;
+  QLineEdit * topic_input_;
+  QLineEdit * message_input_;
+  QPushButton * send_button_;
+  QString topic_name_ = "/messages";
 };
 
 }  // namespace dua_rviz_plugins

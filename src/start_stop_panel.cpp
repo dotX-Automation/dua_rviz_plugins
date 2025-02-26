@@ -89,17 +89,17 @@ StartStopPanel::StartStopPanel(QWidget * parent)
   setLayout(main_layout);
 }
 
-void StartStopPanel::init_start_pub(const std::string & start_topic_)
+void StartStopPanel::init_start_pub(const std::string & start_topic_str)
 {
   start_pub_ = node_->create_publisher<Empty>(
-    start_topic_,
+    start_topic_str,
     dua_qos::Reliable::get_datum_qos());
 }
 
-void StartStopPanel::init_stop_pub(const std::string & stop_topic_)
+void StartStopPanel::init_stop_pub(const std::string & stop_topic_str)
 {
   stop_pub_ = node_->create_publisher<Empty>(
-    stop_topic_,
+    stop_topic_str,
     dua_qos::Reliable::get_datum_qos());
 }
 

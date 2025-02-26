@@ -1,8 +1,7 @@
 /**
- * Reference of RViz2 TextSubPanel for DUA modules.
+ * TextSubPanel header file.
  *
- * Alessandro Tenaglia <a.tenaglia@dotxautomation.com>
- * Alexandru Cretu <a.cretu@dotxautomation.com>
+ * dotX Automation <info@dotxautomation.com>
  *
  *  February 17, 2025
  */
@@ -23,26 +22,35 @@
  * limitations under the License.
  */
 
-#ifndef DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
-#define DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
+ #ifndef DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
+ #define DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
 
+// ROS2 libraries
+#include <rclcpp/rclcpp.hpp>
 #include <rviz_common/panel.hpp>
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
 
-#include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/string.hpp>
-
+// Qt libraries
 #include <QLabel>
 #include <QLineEdit>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
+// C++ libraries
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <yaml-cpp/yaml.h>
 
+// Messages
+#include <std_msgs/msg/string.hpp>
+
+#define SUB_QUEUE_SIZE 10
+#define TEXT_SIZE 20
+
 namespace dua_rviz_plugins
 {
+
+using std_msgs::msg::String;
 
 /**
  * @brief Custom panel for displaying overlay text messages in RViz.
@@ -53,7 +61,7 @@ class TextSubPanel : public rviz_common::Panel
 
 public:
   /**
-   * @brief Constructor for TextSubPanel.
+   * @brief Constructor.
    *
    * @param parent The parent widget.
    */
@@ -102,16 +110,13 @@ private:
    */
   void callback(const std_msgs::msg::String::SharedPtr msg);
 
-  QLabel * label_;               /**< Label to display the received message. */
-  QLabel * topic_info_label_;    /**< Label to display the subscribed topic name. */
-  QLineEdit * topic_input_;      /**< Input field for setting the ROS topic name. */
-
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_; /**< ROS 2 subscription for receiving messages. */
-  rclcpp::Node::SharedPtr node_; /**< Shared pointer to the ROS 2 node used for communication. */
-
-  QString topic_name_ = ""; /**< Stores the current topic name for subscriptions. */
-
-  std::map<std::string, std::string> color_map_; /**< Static map loaded from yaml. >*/
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
+  rclcpp::Node::SharedPtr node_;
+  QLabel * label_;
+  QLabel * topic_info_label_;
+  QLineEdit * topic_input_;
+  QString topic_name_ = "";
+  std::map<std::string, std::string> color_map_;
 };
 
 }  // namespace dua_rviz_plugins
