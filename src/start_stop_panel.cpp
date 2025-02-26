@@ -32,22 +32,15 @@ StartStopPanel::StartStopPanel(QWidget * parent)
   start_topic_("/start"),
   stop_topic_("/stop")
 {
-  // Initialize ROS2 node
-  node_ = std::make_shared<rclcpp::Node>("rviz_button_node");
-
-  // Create start and stop publishers
-  init_start_pub(start_topic_.toStdString());
-  init_stop_pub(stop_topic_.toStdString());
-
   // Create the UI elements for start topic
-  QLabel * start_label = new QLabel("Start Topic:", this);
-  start_topic_input_ = new QLineEdit(start_topic_, this);
+  QLabel * start_label = new QLabel("Start Topic:");
+  start_topic_input_ = new QLineEdit(start_topic_);
   connect(
     start_topic_input_,
     &QLineEdit::editingFinished,
     this,
     &StartStopPanel::update_start_topic);
-  QPushButton * start_button = new QPushButton("START", this);
+  QPushButton * start_button = new QPushButton("START");
   start_button->setStyleSheet("color: green; font-weight: bold;");
   connect(
     start_button,
@@ -56,14 +49,14 @@ StartStopPanel::StartStopPanel(QWidget * parent)
     &StartStopPanel::start_button_clicked);
 
   // Create the UI elements for stop topic
-  QLabel * stop_label = new QLabel("Stop Topic:", this);
-  stop_topic_input_ = new QLineEdit(stop_topic_, this);
+  QLabel * stop_label = new QLabel("Stop Topic:");
+  stop_topic_input_ = new QLineEdit(stop_topic_);
   connect(
     stop_topic_input_,
     &QLineEdit::editingFinished,
     this,
     &StartStopPanel::update_stop_topic);
-  QPushButton * stop_button = new QPushButton("STOP", this);
+  QPushButton * stop_button = new QPushButton("STOP");
   stop_button->setStyleSheet("color: red; font-weight: bold;");
   connect(
     stop_button,
@@ -89,6 +82,19 @@ StartStopPanel::StartStopPanel(QWidget * parent)
   setLayout(main_layout);
 }
 
+void StartStopPanel::onInitialize()
+{
+  // Call the base class implementation
+  rviz_common::Panel::onInitialize();
+
+  // Get the ROS node associated with RViz
+  node_ = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+
+  // Create start and stop publishers
+  init_start_pub(start_topic_.toStdString());
+  init_stop_pub(stop_topic_.toStdString());
+}
+
 void StartStopPanel::init_start_pub(const std::string & start_topic_str)
 {
   start_pub_ = node_->create_publisher<Empty>(
@@ -105,17 +111,19 @@ void StartStopPanel::init_stop_pub(const std::string & stop_topic_str)
 
 void StartStopPanel::start_button_clicked()
 {
-  Empty empty_msg;
+  // Publish the stop message REPUBLISH_COUNT times
+  Empty msg;
   for (int i = 0; i < REPUBLISH_COUNT; i++) {
-    start_pub_->publish(empty_msg);
+    start_pub_->publish(msg);
   }
 }
 
 void StartStopPanel::stop_button_clicked()
 {
-  Empty empty_msg;
+  // Publish the stop message REPUBLISH_COUNT times
+  Empty msg;
   for (int i = 0; i < REPUBLISH_COUNT; i++) {
-    stop_pub_->publish(empty_msg);
+    stop_pub_->publish(msg);
   }
 }
 

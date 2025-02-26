@@ -29,41 +29,40 @@ namespace dua_rviz_plugins
 
 TextPubPanel::TextPubPanel(QWidget * parent)
 : rviz_common::Panel(parent),
-  topic_name_("/messages")
+  topic_("/messages")
 {
-  // Create GUI elements
-  QVBoxLayout * layout = new QVBoxLayout;
-
   // Create the input fields and buttons
-  topic_label_ = new QLabel("Topic:");
-  topic_input_ = new QLineEdit(topic_name_);
-  connect(topic_input_,
+  QLabel * topic_label = new QLabel("Topic:");
+  topic_input_ = new QLineEdit(topic_);
+  connect(
+    topic_input_,
     &QLineEdit::editingFinished,
     this,
-    &TextPubPanel::updateTopic);
+    &TextPubPanel::update_topic);
 
   // Create the message input field
+  QLabel * message_label = new QLabel("Message:");
   message_input_ = new QLineEdit();
   message_input_->setPlaceholderText("Enter message");
 
   // Create the send button
-  send_button_ = new QPushButton("PUBLISH");
-  send_button_->setStyleSheet("color: black; font-weight: bold;");
-  connect(send_button_,
+  QPushButton * send_button = new QPushButton("PUBLISH");
+  send_button->setStyleSheet("color: black; font-weight: bold;");
+  connect(
+    send_button,
     &QPushButton::clicked,
     this,
-    &TextPubPanel::sendMessage);
+    &TextPubPanel::send_button_clicked);
 
-  // Create the status label
-  status_label_ = new QLabel("Ready to publish");
-
-  // Add the elements to the layout
-  layout->addWidget(topic_label_);
+  // Create the layout
+  auto layout = new QVBoxLayout();
+  // Add the widgets to the layout
+  layout->addWidget(topic_label);
   layout->addWidget(topic_input_);
-  layout->addWidget(new QLabel("Message:"));
+  layout->addWidget(message_label);
   layout->addWidget(message_input_);
-  layout->addWidget(send_button_);
-  layout->addWidget(status_label_);
+  layout->addWidget(send_button);
+  // Set the main layout
   setLayout(layout);
 }
 
@@ -74,38 +73,38 @@ void TextPubPanel::onInitialize()
 
   // Get the ROS node associated with RViz
   node_ = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+
+  // Create the publisher
+  init_pub(topic_.toStdString());
 }
 
-void TextPubPanel::updateTopic()
+void TextPubPanel::init_pub(const std::string & topic_str)
 {
-  // Get the new topic name
+  pub_ = node_->create_publisher<String>(
+    topic_str,
+    dua_qos::Reliable::get_datum_qos());
+}
+
+void TextPubPanel::send_button_clicked()
+{
+  // Parse the message from the input field
+  String msg;
+  msg.data = message_input_->text().toStdString();
+  // Publish the message REPUBLISH_COUNT times
+  for (int i = 0; i < REPUBLISH_COUNT; i++) {
+    pub_->publish(msg);
+  }
+}
+
+void TextPubPanel::update_topic()
+{
+  // Parse the topic name from the input field
   QString new_topic = topic_input_->text().trimmed();
 
   // Update the topic name and reset the publisher
-  if (!new_topic.isEmpty() && new_topic != topic_name_) {
-    topic_name_ = new_topic;
-    publisher_.reset();
-  }
-}
-
-void TextPubPanel::sendMessage()
-{
-  // Check if the node is valid
-  if (!node_) return;
-
-  // Create a new publisher if necessary
-  if (!publisher_) {
-    publisher_ = node_->create_publisher<std_msgs::msg::String>(
-      topic_name_.toStdString(),
-      PUB_QUEUE_SIZE);
-  }
-
-  // Publish the message
-  auto msg = std_msgs::msg::String();
-  msg.data = message_input_->text().toStdString();
-  if (!msg.data.empty()) {
-    publisher_->publish(msg);
-    status_label_->setText("Message sent to " + topic_name_);
+  if (!new_topic.isEmpty() && new_topic != topic_) {
+    topic_ = new_topic;
+    init_pub(topic_.toStdString());
   }
 }
 

@@ -31,14 +31,16 @@
 // ROS2 libraries
 #include <rclcpp/rclcpp.hpp>
 #include <rviz_common/panel.hpp>
+#include <rviz_common/display_context.hpp>
+#include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
 
 // Qt libraries
-#include <QPushButton>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
-#include <QLineEdit>
 #include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QString>
+#include <QVBoxLayout>
 
 // Messages
 #include <std_msgs/msg/empty.hpp>
@@ -62,6 +64,11 @@ public:
    * @brief Constructor
    */
   StartStopPanel(QWidget * parent = nullptr);
+
+  /**
+   * @brief Initializes the panel.
+   */
+  void onInitialize() override;
 
 private Q_SLOTS:
   /**

@@ -25,8 +25,11 @@
  #ifndef DUA_RVIZ_PLUGINS__TEXT_PUB_PANEL_HPP_
  #define DUA_RVIZ_PLUGINS__TEXT_PUB_PANEL_HPP_
 
- // ROS2 libraries
- #include <rclcpp/rclcpp.hpp>
+// DUA libraries
+#include <dua_qos_cpp/dua_qos.hpp>
+
+// ROS2 libraries
+#include <rclcpp/rclcpp.hpp>
 #include <rviz_common/panel.hpp>
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
@@ -35,12 +38,13 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QString>
 #include <QVBoxLayout>
 
 // Messages
 #include <std_msgs/msg/string.hpp>
 
-#define PUB_QUEUE_SIZE 10
+#define REPUBLISH_COUNT 10
 
 namespace dua_rviz_plugins
 {
@@ -63,30 +67,34 @@ public:
   TextPubPanel(QWidget * parent = nullptr);
 
   /**
-   * @brief Initializes the panel when it is added to RViz.
+   * @brief Initializes the panel.
    */
   void onInitialize() override;
 
 private Q_SLOTS:
   /**
-   * @brief Updates the topic name and creates a new publisher if necessary.
+   * @brief Initializes the publisher.
+   *
+   * @param topic_str The name of the topic.
    */
-  void updateTopic();
+  void init_pub(const std::string & topic_str);
 
   /**
-   * @brief Sends the message to the selected topic.
+   * @brief Publishes the message to the topic.
    */
-  void sendMessage();
+  void send_button_clicked();
+
+  /**
+   * @brief Updates the topic name and creates a new publisher if necessary.
+   */
+  void update_topic();
 
 private:
   rclcpp::Node::SharedPtr node_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
-  QLabel * topic_label_;
-  QLabel * status_label_;
+  QString topic_;
+  rclcpp::Publisher<String>::SharedPtr pub_;
   QLineEdit * topic_input_;
   QLineEdit * message_input_;
-  QPushButton * send_button_;
-  QString topic_name_ = "/messages";
 };
 
 }  // namespace dua_rviz_plugins
