@@ -25,6 +25,9 @@
  #ifndef DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
  #define DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
 
+// DUA libraries
+#include <dua_qos_cpp/dua_qos.hpp>
+
 // ROS2 libraries
 #include <rclcpp/rclcpp.hpp>
 #include <rviz_common/panel.hpp>
@@ -34,8 +37,8 @@
 // Qt libraries
 #include <QLabel>
 #include <QLineEdit>
+#include <QString>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 
 // C++ libraries
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -44,7 +47,6 @@
 // Messages
 #include <std_msgs/msg/string.hpp>
 
-#define SUB_QUEUE_SIZE 10
 #define TEXT_SIZE 20
 
 namespace dua_rviz_plugins
@@ -68,54 +70,37 @@ public:
   TextSubPanel(QWidget * parent = nullptr);
 
   /**
-   * @brief Initializes the panel when it is added to RViz.
+   * @brief Initializes the panel.
    */
   void onInitialize() override;
 
-  /**
-   * @brief Saves the panel configuration, including the selected topic.
-   *
-   * @param config The configuration object to store the topic name.
-   */
-  void save(rviz_common::Config config) const override;
-
-  /**
-   * @brief Loads the panel configuration and restores the topic subscription.
-   *
-   * @param config The configuration object containing the stored topic name.
-   */
-  void load(const rviz_common::Config & config) override;
-
 private Q_SLOTS:
-  /**
-   * @brief Updates the topic subscription based on user input.
-   */
-  void updateTopic();
-
-private:
-  /**
-   * @brief Subscribes to the selected ROS 2 topic.
-   */
-  void subscribe();
 
   /**
-   * @brief Unsubscribes from the current topic to release resources.
+   * @brief Initializes the subscriber.
+   *
+   * @param topic_str The name of the topic.
    */
-  void unsubscribe();
+  void init_sub(const std::string & topic_str);
 
   /**
    * @brief Callback function that updates the UI with the received boolean message.
    *
    * @param msg The received message containing the string data.
    */
-  void callback(const std_msgs::msg::String::SharedPtr msg);
+  void show_message_received(const std_msgs::msg::String::SharedPtr msg);
 
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
+  /**
+   * @brief Updates the topic name based on user input.
+   */
+  void update_topic();
+
+private:
   rclcpp::Node::SharedPtr node_;
-  QLabel * label_;
-  QLabel * topic_info_label_;
+  QString topic_;
+  rclcpp::Subscription<String>::SharedPtr sub_;
   QLineEdit * topic_input_;
-  QString topic_name_ = "";
+  QLabel * message_label_;
   std::map<std::string, std::string> color_map_;
 };
 
