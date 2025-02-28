@@ -70,6 +70,20 @@ public:
    */
   void onInitialize() override;
 
+  /**
+   * @brief Saves the panel configuration.
+   *
+   * @param config The configuration object.
+   */
+  void save(rviz_common::Config config) const override;
+
+  /**
+   * @brief Loads the panel configuration.
+   *
+   * @param config The configuration object.
+   */
+  void load(const rviz_common::Config & config) override;
+
 private Q_SLOTS:
   /**
    * @brief Initializes the publisher for the start button.

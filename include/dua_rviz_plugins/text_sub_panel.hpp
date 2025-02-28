@@ -41,7 +41,6 @@
 #include <QVBoxLayout>
 
 // C++ libraries
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <yaml-cpp/yaml.h>
 
 // Messages
@@ -74,8 +73,21 @@ public:
    */
   void onInitialize() override;
 
-private Q_SLOTS:
+  /**
+   * @brief Saves the panel configuration.
+   *
+   * @param config The configuration object.
+   */
+  void save(rviz_common::Config config) const override;
 
+  /**
+   * @brief Loads the panel configuration.
+   *
+   * @param config The configuration object.
+   */
+  void load(const rviz_common::Config & config) override;
+
+private Q_SLOTS:
   /**
    * @brief Initializes the subscriber.
    *

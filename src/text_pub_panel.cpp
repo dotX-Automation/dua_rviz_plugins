@@ -78,6 +78,29 @@ void TextPubPanel::onInitialize()
   init_pub(topic_.toStdString());
 }
 
+void TextPubPanel::save(rviz_common::Config config) const
+{
+  // Call the base class implementation
+  rviz_common::Panel::save(config);
+
+  // Save the topic name
+  config.mapSetValue("Topic", topic_);
+}
+
+void TextPubPanel::load(const rviz_common::Config & config)
+{
+  // Call the base class implementation
+  rviz_common::Panel::load(config);
+
+  // Load the topic name
+  QString topic;
+  if (config.mapGetString("Topic", &topic)) {
+    topic_ = topic;
+    topic_input_->setText(topic_);
+    init_pub(topic_.toStdString());
+  }
+}
+
 void TextPubPanel::init_pub(const std::string & topic_str)
 {
   pub_ = node_->create_publisher<String>(

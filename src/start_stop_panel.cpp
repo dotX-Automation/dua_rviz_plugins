@@ -95,6 +95,36 @@ void StartStopPanel::onInitialize()
   init_stop_pub(stop_topic_.toStdString());
 }
 
+void StartStopPanel::save(rviz_common::Config config) const
+{
+  // Call the base class implementation
+  rviz_common::Panel::save(config);
+
+  // Save the topic names
+  config.mapSetValue("StartTopic", start_topic_);
+  config.mapSetValue("StopTopic", stop_topic_);
+}
+
+void StartStopPanel::load(const rviz_common::Config & config)
+{
+  // Call the base class implementation
+  rviz_common::Panel::load(config);
+
+  // Load the topic names
+  QString start_topic;
+  if (config.mapGetString("StartTopic", &start_topic)) {
+    start_topic_ = start_topic;
+    start_topic_input_->setText(start_topic_);
+    init_start_pub(start_topic_.toStdString());
+  }
+  QString stop_topic;
+  if (config.mapGetString("StopTopic", &stop_topic)) {
+    stop_topic_ = stop_topic;
+    stop_topic_input_->setText(stop_topic_);
+    init_stop_pub(stop_topic_.toStdString());
+  }
+}
+
 void StartStopPanel::init_start_pub(const std::string & start_topic_str)
 {
   start_pub_ = node_->create_publisher<Empty>(

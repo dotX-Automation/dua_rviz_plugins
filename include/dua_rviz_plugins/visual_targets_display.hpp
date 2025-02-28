@@ -26,7 +26,7 @@
 #define DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
 
 #include <dua_qos_cpp/dua_qos.hpp>
-#include <dua_interfaces/msg/visual_targets.hpp>
+#include <dua_mission_interfaces/msg/visual_targets.hpp>
 
 #include <rviz_common/ros_topic_display.hpp>
 #include <rviz_common/display_context.hpp>
@@ -67,7 +67,7 @@ typedef std::vector<Info> Infos;
  * @brief Display visual targets in RViz.
  */
 class VisualTargetsDisplay
-  : public rviz_common::RosTopicDisplay<dua_interfaces::msg::VisualTargets>
+  : public rviz_common::RosTopicDisplay<dua_mission_interfaces::msg::VisualTargets>
 {
   Q_OBJECT
 
@@ -89,7 +89,7 @@ protected:
   /**
    * @brief Process the received message.
    */
-  void processMessage(dua_interfaces::msg::VisualTargets::ConstSharedPtr msg) override;
+  void processMessage(dua_mission_interfaces::msg::VisualTargets::ConstSharedPtr msg) override;
 
 private:
   /**

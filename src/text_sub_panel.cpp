@@ -60,8 +60,7 @@ void TextSubPanel::onInitialize()
   node_ = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
   // Load the color configuration from a YAML file
-  std::string pkg_share_dir = ament_index_cpp::get_package_share_directory("dua_rviz_plugins");
-  std::string yaml_file = pkg_share_dir + "/config/colors.yaml";
+  std::string yaml_file = "src/dua_rviz_plugins/config/colors.yaml";
   YAML::Node config = YAML::LoadFile(yaml_file);
   for (auto it = config.begin(); it != config.end(); ++it) {
     std::string key = it->first.as<std::string>();
@@ -71,6 +70,29 @@ void TextSubPanel::onInitialize()
 
   // Create the subscriber
   init_sub(topic_.toStdString());
+}
+
+void TextSubPanel::save(rviz_common::Config config) const
+{
+  // Call the base class implementation
+  rviz_common::Panel::save(config);
+
+  // Save the topic name
+  config.mapSetValue("Topic", topic_);
+}
+
+void TextSubPanel::load(const rviz_common::Config & config)
+{
+  // Call the base class implementation
+  rviz_common::Panel::load(config);
+
+  // Load the topic name
+  QString topic;
+  if (config.mapGetString("Topic", &topic)) {
+    topic_ = topic;
+    topic_input_->setText(topic_);
+    init_sub(topic_.toStdString());
+  }
 }
 
 void TextSubPanel::init_sub(const std::string & topic_str)

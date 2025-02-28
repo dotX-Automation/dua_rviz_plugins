@@ -18,7 +18,7 @@ endif()
 # Find packages
 find_package(ament_cmake REQUIRED)
 find_package(yaml-cpp REQUIRED)
-find_package(dua_interfaces REQUIRED)
+find_package(dua_mission_interfaces REQUIRED)
 find_package(dua_qos_cpp REQUIRED)
 find_package(interactive_markers REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -58,7 +58,7 @@ target_link_libraries(dua_rviz_plugins
   yaml-cpp
 )
 ament_target_dependencies(dua_rviz_plugins
-  dua_interfaces
+  dua_mission_interfaces
   dua_qos_cpp
   interactive_markers
   pluginlib

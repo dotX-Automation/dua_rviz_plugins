@@ -28,7 +28,7 @@ namespace dua_rviz_plugins
 {
 
 VisualTargetsDisplay::VisualTargetsDisplay()
-: rviz_common::RosTopicDisplay<dua_interfaces::msg::VisualTargets>()
+: rviz_common::RosTopicDisplay<dua_mission_interfaces::msg::VisualTargets>()
 {
 }
 
@@ -52,7 +52,8 @@ void VisualTargetsDisplay::onInitialize()
     node);
 }
 
-void VisualTargetsDisplay::processMessage(dua_interfaces::msg::VisualTargets::ConstSharedPtr msg)
+void VisualTargetsDisplay::processMessage(
+  dua_mission_interfaces::msg::VisualTargets::ConstSharedPtr msg)
 {
   // Clear the server
   mutex_.lock();
@@ -116,7 +117,8 @@ void VisualTargetsDisplay::createInteractiveMarker(
     marker.color.set__g(1.0);
     marker.color.set__b(1.0);
     marker.color.set__a(1.0);
-    std::string mesh_resource = "file:////home/neo/workspace/src/dua_rviz_plugins/dae/" + id + ".dae";
+    std::string mesh_resource = "file:////home/neo/workspace/src/dua_rviz_plugins/dae/" + id +
+      ".dae";
     marker.set__mesh_resource(mesh_resource);
     marker.set__mesh_use_embedded_materials(true);
   }
