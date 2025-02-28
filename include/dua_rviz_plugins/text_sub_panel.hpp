@@ -47,7 +47,7 @@
 // Messages
 #include <std_msgs/msg/string.hpp>
 
-#define TEXT_SIZE 20
+#define FONT_SIZE 20
 
 namespace dua_rviz_plugins
 {

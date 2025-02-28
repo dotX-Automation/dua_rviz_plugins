@@ -98,8 +98,7 @@ void TextSubPanel::show_message_received(const std_msgs::msg::String::SharedPtr 
   std::string text;
   if (msg->data.empty()) {
     text = "Empty message";
-  }
-  else {
+  } else {
     text = msg->data;
   }
 
@@ -107,9 +106,9 @@ void TextSubPanel::show_message_received(const std_msgs::msg::String::SharedPtr 
   message_label_->setText(
     QString(
       "<font color='%1' style='font-size:%2px;'>%3</font>")
-      .arg(color.c_str())
-      .arg(TEXT_SIZE)
-      .arg(QString::fromStdString(text)));
+    .arg(color.c_str())
+    .arg(FONT_SIZE)
+    .arg(QString::fromStdString(text)));
 }
 
 void TextSubPanel::update_topic()
