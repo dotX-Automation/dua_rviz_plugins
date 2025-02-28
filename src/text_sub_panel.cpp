@@ -40,10 +40,16 @@ TextSubPanel::TextSubPanel(QWidget * parent)
     this,
     &TextSubPanel::update_topic);
 
+  // Create the label for the message
+  message_label_ = new QLabel(
+    QString(
+      "<font style='font-size:%2px;'>%3</font>")
+    .arg(FONT_SIZE)
+    .arg("Waiting..."));
+
   // Create the layout
   auto layout = new QVBoxLayout;
   // Add the widgets to the layout
-  message_label_ = new QLabel("Message:");
   layout->addWidget(topic_label);
   layout->addWidget(topic_input_);
   layout->addWidget(message_label_);
