@@ -3,9 +3,9 @@
 <package format="3">
   <name>dua_rviz_plugins</name>
   <version>1.0.0</version>
-  <description>A package for custom RViz plugins for DUA.</description>
+  <description>DUA custom RViz plugins.</description>
   <maintainer email="info@dotxautomation.com">dotX Automation s.r.l.</maintainer>
-  <license>Apache License 2.0</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
