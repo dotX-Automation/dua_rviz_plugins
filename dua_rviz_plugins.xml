@@ -1,0 +1,22 @@
+<library path="dua_rviz_plugins">
+  <class name="StartStopPanel" type="dua_rviz_plugins::StartStopPanel" base_class_type="rviz_common::Panel">
+    <description>
+      A panel that displays a start/stop button
+    </description>
+  </class>
+  <class name="TextSubPanel" type="dua_rviz_plugins::TextSubPanel" base_class_type="rviz_common::Panel">
+    <description>
+      A panel that displays text from a ROS 2 topic.
+    </description>
+  </class>
+  <class name="TextPubPanel" type="dua_rviz_plugins::TextPubPanel" base_class_type="rviz_common::Panel">
+    <description>
+      A panel that sends text to a ROS 2 topic.
+    </description>
+  </class>
+  <class name="VisualTargetsDisplay" type="dua_rviz_plugins::VisualTargetsDisplay" base_class_type="rviz_common::Display">
+    <description>
+      A display that shows an interactive marker.
+    </description>
+  </class>
+</library>

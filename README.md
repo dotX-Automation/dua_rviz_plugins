@@ -1,6 +1,6 @@
 # dua_rviz_plugins
 
-A collection of custom plugins for RViz visualization integrated with the DUA framework.
+Collection of C++ plugins for RViz visualization integrated with the DUA framework.
 
 ---
 
