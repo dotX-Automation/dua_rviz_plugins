@@ -66,7 +66,15 @@ void TextSubPanel::onInitialize()
   node_ = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
   // Load the color configuration from a YAML file
-  std::string yaml_file = "src/dua_rviz_plugins/config/colors.yaml";
+  char * yaml_path = std::getenv("DUA_RVIZ_PLUGINS_TEXTSUB_COLORS_YAML_PATH");
+  std::string yaml_file = "";
+  if (yaml_path != nullptr) {
+    // Use user-specified YAML file path
+    yaml_file = std::string(yaml_path);
+  } else {
+    // Use default YAML file path
+    yaml_file = "/opt/ros/dua-utils/src/dotX-Automation/src/dua_rviz_plugins/config/colors.yaml";
+  }
   YAML::Node config = YAML::LoadFile(yaml_file);
   for (auto it = config.begin(); it != config.end(); ++it) {
     std::string key = it->first.as<std::string>();
