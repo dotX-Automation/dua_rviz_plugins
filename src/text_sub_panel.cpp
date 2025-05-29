@@ -73,7 +73,7 @@ void TextSubPanel::onInitialize()
     yaml_file = std::string(yaml_path);
   } else {
     // Use default YAML file path
-    yaml_file = "/opt/ros/dua-utils/src/dotX-Automation/src/dua_rviz_plugins/config/colors.yaml";
+    yaml_file = "/opt/ros/dua-utils/src/dotX-Automation/dua_rviz_plugins/config/colors.yaml";
   }
   YAML::Node config = YAML::LoadFile(yaml_file);
   for (auto it = config.begin(); it != config.end(); ++it) {

@@ -117,7 +117,7 @@ void VisualTargetsDisplay::createInteractiveMarker(
     marker.color.set__g(1.0);
     marker.color.set__b(1.0);
     marker.color.set__a(1.0);
-    std::string mesh_resource = "file:////home/neo/workspace/src/dua_rviz_plugins/dae/" + id +
+    std::string mesh_resource = "file:////opt/ros/dua-utils/src/dotX-Automation/dua_rviz_plugins/dae/" + id +
       ".dae";
     marker.set__mesh_resource(mesh_resource);
     marker.set__mesh_use_embedded_materials(true);
