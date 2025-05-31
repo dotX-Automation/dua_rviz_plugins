@@ -238,7 +238,6 @@ void VisualTargetsDisplay::showImage(const std::string & id)
 
     // Create layout for this image and its label
     QVBoxLayout * entry_layout = new QVBoxLayout();
-    entry_layout->setContentsMargins(0, 0, 0, 0);
     entry_layout->setAlignment(Qt::AlignTop);
     QLabel * agent_label = new QLabel(QString::fromStdString(std::get<0>(info)));
     agent_label->setAlignment(Qt::AlignCenter);
@@ -265,6 +264,7 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   dialog_layout->addWidget(scroll_area);
   dialog->setLayout(dialog_layout);
 
+  dialog->setMinimumSize(800, 600);
   dialog->adjustSize();
   dialog->show();
 
