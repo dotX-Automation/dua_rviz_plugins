@@ -264,7 +264,7 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   dialog_layout->addWidget(scroll_area);
   dialog->setLayout(dialog_layout);
 
-  dialog->setMinimumSize(800, 600);
+  dialog->setMinimumSize(640, 480);
   dialog->adjustSize();
   dialog->show();
 
