@@ -189,6 +189,7 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   QScrollArea * scroll_area = new QScrollArea(dialog);
   QWidget * scroll_content = new QWidget(scroll_area);
   QVBoxLayout * scroll_layout = new QVBoxLayout(scroll_content);
+  scroll_layout->setContentsMargins(0, 0, 0, 0);
 
   // Iterate from latest to oldest
   for (auto it = infos.rbegin(); it != infos.rend(); ++it) {
@@ -237,6 +238,8 @@ void VisualTargetsDisplay::showImage(const std::string & id)
 
     // Create layout for this image and its label
     QVBoxLayout * entry_layout = new QVBoxLayout();
+    entry_layout->setContentsMargins(0, 0, 0, 0);
+    entry_layout->setAlignment(Qt::AlignTop);
     QLabel * agent_label = new QLabel(QString::fromStdString(std::get<0>(info)));
     agent_label->setAlignment(Qt::AlignCenter);
     agent_label->setStyleSheet("font-weight: bold; margin: 2px;");
@@ -262,7 +265,7 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   dialog_layout->addWidget(scroll_area);
   dialog->setLayout(dialog_layout);
 
-  dialog->resize(960, 720);
+  dialog->adjustSize();
   dialog->show();
 
   mutex_.unlock();
