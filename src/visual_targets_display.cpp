@@ -74,7 +74,7 @@ void VisualTargetsDisplay::processMessage(
   // Create interactive markers for each visual target
   for (const auto & entry : map_) {
     const auto & id = entry.first;
-    const Info & infos = entry.second[0];
+    const Info & infos = entry.second.back();
     const Pose & pose = std::get<1>(infos);
     createInteractiveMarker(
       pose,
@@ -117,7 +117,8 @@ void VisualTargetsDisplay::createInteractiveMarker(
     marker.color.set__g(1.0);
     marker.color.set__b(1.0);
     marker.color.set__a(1.0);
-    std::string mesh_resource = "file:////opt/ros/dua-utils/src/dotX-Automation/dua_rviz_plugins/dae/" + id +
+    std::string mesh_resource =
+      "file:////opt/ros/dua-utils/src/dotX-Automation/dua_rviz_plugins/dae/" + id +
       ".dae";
     marker.set__mesh_resource(mesh_resource);
     marker.set__mesh_use_embedded_materials(true);
@@ -166,34 +167,32 @@ void VisualTargetsDisplay::processFeedback(
 
 void VisualTargetsDisplay::showImage(const std::string & id)
 {
-  // Take the mutex to access the map
   mutex_.lock();
 
-  // Create a dialog to display the images
-  QDialog * dialog = new QDialog();
-
-  // Ensure the dialog is deleted when closed
-  dialog->setAttribute(Qt::WA_DeleteOnClose);
-
-  // Set the dialog title using the class_id in bold, uppercase and larger font
-  std::string class_id = id;
-  std::replace(class_id.begin(), class_id.end(), '_', ' ');
-  std::transform(class_id.begin(), class_id.end(), class_id.begin(), ::toupper);
-  dialog->setWindowTitle(QString::fromStdString(class_id));
-
-  // Create a layout to display the images
   const Infos & infos = map_[id];
-
-  // Check if the map is empty and then unlock the mutex
   if (infos.empty()) {
     mutex_.unlock();
     return;
   }
 
-  // Iterate over the images and create a label for each image
-  QHBoxLayout * main_layout = new QHBoxLayout(dialog);
-  for (const Info & info : infos) {
-    // Convert sensor_msgs::msg::Image to QImage
+  // Create a dialog to display the images
+  QDialog * dialog = new QDialog();
+  dialog->setAttribute(Qt::WA_DeleteOnClose);
+
+  // Set the dialog title using the class_id
+  std::string class_id = id;
+  std::replace(class_id.begin(), class_id.end(), '_', ' ');
+  std::transform(class_id.begin(), class_id.end(), class_id.begin(), ::toupper);
+  dialog->setWindowTitle(QString::fromStdString(class_id));
+
+  // Create a scrollable area
+  QScrollArea * scroll_area = new QScrollArea(dialog);
+  QWidget * scroll_content = new QWidget(scroll_area);
+  QVBoxLayout * scroll_layout = new QVBoxLayout(scroll_content);
+
+  // Iterate from latest to oldest
+  for (auto it = infos.rbegin(); it != infos.rend(); ++it) {
+    const Info & info = *it;
     const sensor_msgs::msg::Image & image = std::get<2>(info);
     QImage qimage;
     const auto & encoding = image.encoding;
@@ -232,35 +231,40 @@ void VisualTargetsDisplay::showImage(const std::string & id)
         QImage::Format_RGBA8888);
       qimage = temp.rgbSwapped();
     } else {
-      continue;
+      continue;  // Skip unsupported formats
     }
-    // Ensure the image data is copied since the original data may be released
-    qimage = qimage.copy();
+    qimage = qimage.copy();  // Ensure data ownership
 
-    // Vertical layout for the agent name and image
-    QVBoxLayout * layout = new QVBoxLayout();
-    QLabel * agent_label = new QLabel(dialog);
-    agent_label->setText(QString::fromStdString(std::get<0>(info)));
+    // Create layout for this image and its label
+    QVBoxLayout * entry_layout = new QVBoxLayout();
+    QLabel * agent_label = new QLabel(QString::fromStdString(std::get<0>(info)));
     agent_label->setAlignment(Qt::AlignCenter);
-    layout->addWidget(agent_label);
+    agent_label->setStyleSheet("font-weight: bold; margin: 4px;");
+    entry_layout->addWidget(agent_label);
 
-    // Create a label to display the image
-    QLabel * image_label = new QLabel(dialog);
+    QLabel * image_label = new QLabel();
     image_label->setPixmap(QPixmap::fromImage(qimage));
     image_label->setAlignment(Qt::AlignCenter);
-    layout->addWidget(image_label);
+    entry_layout->addWidget(image_label);
 
-    // Add the layout to the main layout
-    main_layout->addLayout(layout);
+    // Wrap entry layout in a QWidget and add to scroll layout
+    QWidget * entry_widget = new QWidget();
+    entry_widget->setLayout(entry_layout);
+    scroll_layout->addWidget(entry_widget);
   }
 
-  // Set the layout for the dialog
-  dialog->setLayout(main_layout);
+  scroll_content->setLayout(scroll_layout);
+  scroll_area->setWidget(scroll_content);
+  scroll_area->setWidgetResizable(true);
 
-  // Show the dialog
+  // Final layout for dialog
+  QVBoxLayout * dialog_layout = new QVBoxLayout(dialog);
+  dialog_layout->addWidget(scroll_area);
+  dialog->setLayout(dialog_layout);
+
+  dialog->resize(640, 480);
   dialog->show();
 
-  // Unlock the mutex
   mutex_.unlock();
 }
 
