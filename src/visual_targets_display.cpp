@@ -239,11 +239,11 @@ void VisualTargetsDisplay::showImage(const std::string & id)
     QVBoxLayout * entry_layout = new QVBoxLayout();
     QLabel * agent_label = new QLabel(QString::fromStdString(std::get<0>(info)));
     agent_label->setAlignment(Qt::AlignCenter);
-    agent_label->setStyleSheet("font-weight: bold; margin: 4px;");
+    agent_label->setStyleSheet("font-weight: bold; margin: 2px;");
     entry_layout->addWidget(agent_label);
 
     QLabel * image_label = new QLabel();
-    image_label->setPixmap(QPixmap::fromImage(qimage));
+    image_label->setPixmap(QPixmap::fromImage(qimage).scaledToWidth(640, Qt::SmoothTransformation));
     image_label->setAlignment(Qt::AlignCenter);
     entry_layout->addWidget(image_label);
 
@@ -262,7 +262,7 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   dialog_layout->addWidget(scroll_area);
   dialog->setLayout(dialog_layout);
 
-  dialog->resize(640, 480);
+  dialog->resize(960, 720);
   dialog->show();
 
   mutex_.unlock();
