@@ -47,6 +47,7 @@
 #include <QObject>
 #include <QApplication>
 #include <QMetaObject>
+#include <QScrollArea>
 #include <QVBoxLayout>
 
 #include <interactive_markers/interactive_marker_server.hpp>
