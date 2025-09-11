@@ -107,21 +107,45 @@ void VisualTargetsDisplay::createInteractiveMarker(
     marker.color.set__g(0.0);
     marker.color.set__b(0.0);
     marker.color.set__a(1.0);
-  } else {
-    // Create a marker for the COLLADA model
-    marker.set__type(visualization_msgs::msg::Marker::MESH_RESOURCE);
+  } else if (id.find("QR") != std::string::npos) {
+    // Create a marker for the QR code
+    marker.set__type(visualization_msgs::msg::Marker::SPHERE);
     marker.scale.set__x(1.0);
     marker.scale.set__y(1.0);
     marker.scale.set__z(1.0);
-    marker.color.set__r(1.0);
-    marker.color.set__g(1.0);
+    marker.color.set__r(0.0);
+    marker.color.set__g(0.0);
     marker.color.set__b(1.0);
     marker.color.set__a(1.0);
+  } else {
+    // Check if COLLADA model exists
     std::string mesh_resource =
-      "file:////opt/ros/dua-utils/src/dotX-Automation/dua_rviz_plugins/dae/" + id +
-      ".dae";
-    marker.set__mesh_resource(mesh_resource);
-    marker.set__mesh_use_embedded_materials(true);
+      "file:////opt/ros/dua-utils/src/dotX-Automation/dua_rviz_plugins/dae/" + id + ".dae";
+    std::string local_path = mesh_resource.substr(7);
+
+    if (std::filesystem::exists(local_path)) {
+      // Create a marker for the COLLADA model
+      marker.set__type(visualization_msgs::msg::Marker::MESH_RESOURCE);
+      marker.scale.set__x(1.0);
+      marker.scale.set__y(1.0);
+      marker.scale.set__z(1.0);
+      marker.color.set__r(1.0);
+      marker.color.set__g(1.0);
+      marker.color.set__b(1.0);
+      marker.color.set__a(1.0);
+      marker.set__mesh_resource(mesh_resource);
+      marker.set__mesh_use_embedded_materials(true);
+    } else {
+      // Create a fallback marker for the COLLADA model
+      marker.set__type(visualization_msgs::msg::Marker::SPHERE);
+      marker.scale.set__x(1.0);
+      marker.scale.set__y(1.0);
+      marker.scale.set__z(1.0);
+      marker.color.set__r(0.5);
+      marker.color.set__g(0.5);
+      marker.color.set__b(0.5);
+      marker.color.set__a(1.0);
+    }
   }
 
   // Create a control for the marker

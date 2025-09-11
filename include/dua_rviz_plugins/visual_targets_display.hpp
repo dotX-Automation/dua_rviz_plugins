@@ -40,6 +40,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <filesystem>
 
 #include <QDialog>
 #include <QImage>
