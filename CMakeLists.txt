@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(dua_rviz_plugins)
 
+cmake_policy(SET CMP0146 OLD)
+
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
@@ -17,9 +19,11 @@ endif()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
+find_package(dua_cv_bridge REQUIRED)
 find_package(dua_mission_interfaces REQUIRED)
 find_package(dua_qos_cpp REQUIRED)
 find_package(interactive_markers REQUIRED)
+find_package(OpenCV 4.11.0 REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(Qt5 COMPONENTS Widgets Core Gui REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -51,12 +55,14 @@ target_include_directories(dua_rviz_plugins PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(dua_rviz_plugins
+  ${OpenCV_LIBS}
   ${Qt5Widgets_LIBRARIES}
   ${Qt5Core_LIBRARIES}
   ${Qt5Gui_LIBRARIES}
   yaml-cpp
 )
 ament_target_dependencies(dua_rviz_plugins
+  dua_cv_bridge
   dua_mission_interfaces
   dua_qos_cpp
   interactive_markers

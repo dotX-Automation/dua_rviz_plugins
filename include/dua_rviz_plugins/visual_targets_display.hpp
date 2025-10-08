@@ -25,6 +25,17 @@
 #ifndef DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
 #define DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
 
+#include <algorithm>
+#include <filesystem>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+
+#include <dua_cv_bridge/dua_cv_bridge.hpp>
+
+#include <opencv2/core.hpp>
+
 #include <dua_qos_cpp/dua_qos.hpp>
 #include <dua_mission_interfaces/msg/visual_targets.hpp>
 
@@ -35,12 +46,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/image_encodings.hpp>
-
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <tuple>
-#include <filesystem>
 
 #include <QDialog>
 #include <QImage>

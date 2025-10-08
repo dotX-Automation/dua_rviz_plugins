@@ -22,7 +22,7 @@
  * limitations under the License.
  */
 
-#include "dua_rviz_plugins/visual_targets_display.hpp"
+#include <dua_rviz_plugins/visual_targets_display.hpp>
 
 namespace dua_rviz_plugins
 {
@@ -65,9 +65,30 @@ void VisualTargetsDisplay::processMessage(
   // Iterate over the detections and create interactive markers
   for (const auto & detection : msg->targets.detections) {
     if (!detection.results.empty()) {
+      // Decompress image
+      cv::Mat frame;
+      Image::SharedPtr img_msg = nullptr;
+      std::string encoding(sensor_msgs::image_encodings::BGR8);
+      if (!(msg->image.format.empty())) {
+        size_t pos = msg->image.format.find(";");
+        if (pos != std::string::npos) {
+          encoding = msg->image.format.substr(0, pos);
+        }
+      }
+      try {
+        CompressedImage::ConstSharedPtr img_ptr = std::make_shared<CompressedImage>(msg->image);
+        dua_cv_bridge::compressed_msg_to_frame(img_ptr, frame);
+        img_msg = dua_cv_bridge::frame_to_msg(frame, encoding);
+      } catch (const std::exception & e) {
+        RCLCPP_ERROR(rclcpp::get_logger("VisualTargetsDisplay"), "Error processing image: %s", e.what());
+        mutex_.unlock();
+        return;
+      }
+
+      // Save target data
       std::string id = detection.results[0].hypothesis.class_id;
       std::replace(id.begin(), id.end(), ' ', '_');
-      const Info info = {agent, detection.results[0].pose.pose, msg->image};
+      const Info info = {agent, detection.results[0].pose.pose, *img_msg};
       map_[id].push_back(info);
     }
   }
