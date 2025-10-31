@@ -22,8 +22,7 @@
  * limitations under the License.
  */
 
- #ifndef DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
- #define DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
+#pragma once
 
 // DUA libraries
 #include <dua_qos_cpp/dua_qos.hpp>
@@ -41,6 +40,7 @@
 #include <QVBoxLayout>
 
 // C++ libraries
+#include <filesystem>
 #include <yaml-cpp/yaml.h>
 
 // Messages
@@ -48,7 +48,7 @@
 
 #define FONT_SIZE 20
 
-namespace dua_rviz_plugins
+namespace dua_rviz_plugins::panels::text_sub
 {
 
 using std_msgs::msg::String;
@@ -116,6 +116,4 @@ private:
   std::map<std::string, std::string> color_map_;
 };
 
-}  // namespace dua_rviz_plugins
-
-#endif  // DUA_RVIZ_PLUGINS__TEXT_SUB_PANEL_HPP_
+}  // namespace dua_rviz_plugins::panels::text_sub

@@ -22,9 +22,9 @@
  * limitations under the License.
  */
 
-#include <dua_rviz_plugins/text_sub_panel.hpp>
+#include <dua_rviz_plugins/panels/text_sub/text_sub_panel.hpp>
 
-namespace dua_rviz_plugins
+namespace dua_rviz_plugins::panels::text_sub
 {
 
 TextSubPanel::TextSubPanel(QWidget * parent)
@@ -66,15 +66,8 @@ void TextSubPanel::onInitialize()
   node_ = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
   // Load the color configuration from a YAML file
-  char * yaml_path = std::getenv("DUA_RVIZ_PLUGINS_TEXTSUB_COLORS_YAML_PATH");
-  std::string yaml_file = "";
-  if (yaml_path != nullptr) {
-    // Use user-specified YAML file path
-    yaml_file = std::string(yaml_path);
-  } else {
-    // Use default YAML file path
-    yaml_file = "/opt/ros/dua-utils/src/dotX-Automation/dua_rviz_plugins/config/colors.yaml";
-  }
+  std::string yaml_file = (
+    std::filesystem::path(__FILE__).parent_path() / "../../../config/colors.yaml").string();
   YAML::Node config = YAML::LoadFile(yaml_file);
   for (auto it = config.begin(); it != config.end(); ++it) {
     std::string key = it->first.as<std::string>();
@@ -159,7 +152,7 @@ void TextSubPanel::update_topic()
   }
 }
 
-}  // namespace dua_rviz_plugins
+}  // namespace dua_rviz_plugins::panels::text_sub
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::TextSubPanel, rviz_common::Panel)
+PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::panels::text_sub::TextSubPanel, rviz_common::Panel)

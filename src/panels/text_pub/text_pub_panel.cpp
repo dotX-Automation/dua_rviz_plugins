@@ -22,9 +22,9 @@
  * limitations under the License.
  */
 
-#include <dua_rviz_plugins/text_pub_panel.hpp>
+#include <dua_rviz_plugins/panels/text_pub/text_pub_panel.hpp>
 
-namespace dua_rviz_plugins
+namespace dua_rviz_plugins::panels::text_pub
 {
 
 TextPubPanel::TextPubPanel(QWidget * parent)
@@ -131,7 +131,7 @@ void TextPubPanel::update_topic()
   }
 }
 
-}  // namespace dua_rviz_plugins
+}  // namespace dua_rviz_plugins::panels::text_pub
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::TextPubPanel, rviz_common::Panel)
+PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::panels::text_pub::TextPubPanel, rviz_common::Panel)

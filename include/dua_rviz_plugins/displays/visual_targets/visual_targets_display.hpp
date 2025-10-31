@@ -22,8 +22,7 @@
  * limitations under the License.
  */
 
-#ifndef DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
-#define DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
+#pragma once
 
 #include <algorithm>
 #include <filesystem>
@@ -61,7 +60,7 @@
 #include <visualization_msgs/msg/interactive_marker_control.hpp>
 #include <visualization_msgs/msg/interactive_marker_feedback.hpp>
 
-namespace dua_rviz_plugins
+namespace dua_rviz_plugins::displays::visual_targets
 {
 
 using geometry_msgs::msg::Pose;
@@ -122,6 +121,4 @@ private:
   std::mutex mutex_;
 };
 
-}  // namespace dua_rviz_plugins
-
-#endif  // DUA_RVIZ_PLUGINS__VISUAL_TARGETS_DISPLAY_HPP_
+}  // namespace dua_rviz_plugins::displays::visual_targets

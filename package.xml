@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>dua_rviz_plugins</name>
-  <version>1.0.5</version>
+  <version>1.1.0</version>
   <description>DUA custom RViz plugins.</description>
   <maintainer email="info@dotxautomation.com">dotX Automation s.r.l.</maintainer>
   <license>Apache-2.0</license>
@@ -12,15 +12,26 @@
   <depend>dua_cv_bridge</depend>
   <depend>dua_mission_interfaces</depend>
   <depend>dua_qos_cpp</depend>
+  <depend>interactive_markers</depend>
   <depend>pluginlib</depend>
+  <depend>Qt5Widgets</depend>
+  <depend>Qt5Core</depend>
+  <depend>Qt5Gui</depend>
+  <depend>Qt5Network</depend>
   <depend>rviz_common</depend>
+  <depend>rviz_default_plugins</depend>
   <depend>rviz_rendering</depend>
-  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>yaml-cpp</depend>
+  <depend>tf2</depend>
+  <depend>sqlite3</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
+    <rviz plugin="${prefix}/dua_rviz_plugins.xml"/>
   </export>
 </package>

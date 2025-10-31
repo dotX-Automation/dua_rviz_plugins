@@ -22,9 +22,9 @@
  * limitations under the License.
  */
 
-#include <dua_rviz_plugins/start_stop_panel.hpp>
+#include <dua_rviz_plugins/panels/start_stop/start_stop_panel.hpp>
 
-namespace dua_rviz_plugins
+namespace dua_rviz_plugins::panels::start_stop
 {
 
 StartStopPanel::StartStopPanel(QWidget * parent)
@@ -181,7 +181,7 @@ void StartStopPanel::update_stop_topic()
   }
 }
 
-}  // namespace dua_rviz_plugins
+}  // namespace dua_rviz_plugins::panels::start_stop
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::StartStopPanel, rviz_common::Panel)
+PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::panels::start_stop::StartStopPanel, rviz_common::Panel)

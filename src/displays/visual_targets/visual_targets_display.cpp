@@ -22,9 +22,9 @@
  * limitations under the License.
  */
 
-#include <dua_rviz_plugins/visual_targets_display.hpp>
+#include <dua_rviz_plugins/displays/visual_targets/visual_targets_display.hpp>
 
-namespace dua_rviz_plugins
+namespace dua_rviz_plugins::displays::visual_targets
 {
 
 VisualTargetsDisplay::VisualTargetsDisplay()
@@ -43,7 +43,6 @@ VisualTargetsDisplay::~VisualTargetsDisplay()
 
 void VisualTargetsDisplay::onInitialize()
 {
-  // Initialize the display
   RosTopicDisplay::onInitialize();
   auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
   auto node = ros_node_abstraction->get_raw_node();
@@ -80,7 +79,8 @@ void VisualTargetsDisplay::processMessage(
         dua_cv_bridge::compressed_msg_to_frame(img_ptr, frame);
         img_msg = dua_cv_bridge::frame_to_msg(frame, encoding);
       } catch (const std::exception & e) {
-        RCLCPP_ERROR(rclcpp::get_logger("VisualTargetsDisplay"), "Error processing image: %s", e.what());
+        RCLCPP_ERROR(rclcpp::get_logger("VisualTargetsDisplay"), "Error processing image: %s",
+            e.what());
         mutex_.unlock();
         return;
       }
@@ -139,11 +139,11 @@ void VisualTargetsDisplay::createInteractiveMarker(
     marker.color.set__b(1.0);
     marker.color.set__a(1.0);
   } else {
-    // Check if COLLADA model exists
+    std::string base_path = (
+      std::filesystem::path(__FILE__).parent_path() / "../../../dae/").string();
     std::string mesh_resource =
-      "file:////opt/ros/dua-utils/src/dotX-Automation/dua_rviz_plugins/dae/" + id + ".dae";
+      "file:///" + base_path + id + ".dae";
     std::string local_path = mesh_resource.substr(7);
-
     if (std::filesystem::exists(local_path)) {
       // Create a marker for the COLLADA model
       marker.set__type(visualization_msgs::msg::Marker::MESH_RESOURCE);
@@ -316,7 +316,8 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   mutex_.unlock();
 }
 
-}  // namespace rviz_custom_plugins
+}  // namespace dua_rviz_plugins::displays::visual_targets
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::VisualTargetsDisplay, rviz_common::Display)
+PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::displays::visual_targets::VisualTargetsDisplay,
+  rviz_common::Display)

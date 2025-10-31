@@ -1,5 +1,5 @@
 /**
- * StartStopPanel header file.
+ * TextPubPanel header file.
  *
  * dotX Automation <info@dotxautomation.com>
  *
@@ -22,8 +22,7 @@
  * limitations under the License.
  */
 
- #ifndef DUA_RVIZ_PLUGINS__START_STOP_PANEL_HPP_
- #define DUA_RVIZ_PLUGINS__START_STOP_PANEL_HPP_
+#pragma once
 
 // DUA libraries
 #include <dua_qos_cpp/dua_qos.hpp>
@@ -35,7 +34,6 @@
 #include <rviz_common/ros_integration/ros_node_abstraction_iface.hpp>
 
 // Qt libraries
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -43,27 +41,29 @@
 #include <QVBoxLayout>
 
 // Messages
-#include <std_msgs/msg/empty.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #define REPUBLISH_COUNT 10
 
-namespace dua_rviz_plugins
+namespace dua_rviz_plugins::panels::text_pub
 {
 
-using std_msgs::msg::Empty;
+using std_msgs::msg::String;
 
 /**
- * @brief Custom button for sending start and stop text messages in RViz.
+ * @brief Custom panel for sending overlay text messages in RViz.
  */
-class StartStopPanel : public rviz_common::Panel
+class TextPubPanel : public rviz_common::Panel
 {
   Q_OBJECT
 
 public:
   /**
-   * @brief Constructor
+   * @brief Constructor.
+   *
+   * @param parent The parent widget.
    */
-  StartStopPanel(QWidget * parent = nullptr);
+  TextPubPanel(QWidget * parent = nullptr);
 
   /**
    * @brief Initializes the panel.
@@ -86,49 +86,28 @@ public:
 
 private Q_SLOTS:
   /**
-   * @brief Initializes the publisher for the start button.
+   * @brief Initializes the publisher.
    *
-   * @param start_topic_str The name of the start topic.
+   * @param topic_str The name of the topic.
    */
-  void init_start_pub(const std::string & start_topic_str);
+  void init_pub(const std::string & topic_str);
 
   /**
-   * @brief Initializes the publisher for the stop button.
-   *
-   * @param stop_topic_str The name of the stop topic.
+   * @brief Publishes the message to the topic.
    */
-  void init_stop_pub(const std::string & stop_topic_str);
+  void send_button_clicked();
 
   /**
-   * @brief Publishes an empty message to the start topic.
+   * @brief Updates the topic name and creates a new publisher if necessary.
    */
-  void start_button_clicked();
-
-  /**
-   * @brief Publishes an empty message to the stop topic.
-   */
-  void stop_button_clicked();
-
-  /**
-   * @brief Updates the publisher for the start topic when the topic name is changed from the GUI.
-   */
-  void update_start_topic();
-
-  /**
-   * @brief Updates the publisher for the stop topic when the topic name is changed from the GUI.
-   */
-  void update_stop_topic();
+  void update_topic();
 
 private:
   rclcpp::Node::SharedPtr node_;
-  QString start_topic_;
-  QString stop_topic_;
-  rclcpp::Publisher<Empty>::SharedPtr start_pub_;
-  rclcpp::Publisher<Empty>::SharedPtr stop_pub_;
-  QLineEdit * start_topic_input_;
-  QLineEdit * stop_topic_input_;
+  QString topic_;
+  rclcpp::Publisher<String>::SharedPtr pub_;
+  QLineEdit * topic_input_;
+  QLineEdit * message_input_;
 };
 
-} // namespace dua_rviz_plugins
-
-#endif  // DUA_RVIZ_PLUGINS__START_STOP_PANEL_HPP_
+}  // namespace dua_rviz_plugins::panels::text_pub
