@@ -2,14 +2,6 @@
 
 Collection of C++ plugins for RViz visualization integrated with the DUA framework.
 
-## Usage
-
-### `TextSubPanel`
-
-This plugin displays a text message in a panel, subscribing to a given topic of type `std_msgs/msg/String`.
-
-The text can be colored depending on the string being displayed. The colors can be specified in a YAML file whose absolute path can be set in the `DUA_RVIZ_PLUGINS_TEXTSUB_COLORS_YAML_PATH` environment variable. A default one is provided in [`config/colors.yaml`](config/colors.yaml).
-
 ---
 
 ## Copyright and License
