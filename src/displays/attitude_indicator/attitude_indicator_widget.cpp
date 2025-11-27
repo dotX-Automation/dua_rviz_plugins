@@ -15,7 +15,7 @@ AttitudeIndicatorWidget::AttitudeIndicatorWidget(QWidget * parent)
 
 QFont AttitudeIndicatorWidget::uiFont(double scale) const
 {
-  QFont f("Roboto Mono"); // one font everywhere
+  QFont f("Roboto Mono");
   f.setBold(true);
   f.setPointSizeF(8.0 * scale);
   return f;
@@ -122,7 +122,7 @@ void AttitudeIndicatorWidget::drawCompass(QPainter & p, const QRectF & r)
   const QPointF c = r.center();
   const double R = std::min(r.width(), r.height()) * 0.48;
   p.setPen(Qt::NoPen);
-  p.setBrush(QColor(20, 20, 20, 200));
+  p.setBrush(QColor(42, 42, 42, 200));
   p.drawEllipse(c, R, R);
   for (int a = 0; a < 360; a += 5) {
     const double rad = deg2rad(a);
@@ -136,7 +136,7 @@ void AttitudeIndicatorWidget::drawCompass(QPainter & p, const QRectF & r)
         const int tw = fm.horizontalAdvance(text);
         const int th = fm.height();
         const QPointF pos(c.x() + r * sa - tw / 2, c.y() - r * ca - th / 2);
-        p.setPen(QPen(QColor(255, 255, 255), 2.0 * scale_));
+        p.setPen(QPen(QColor(200, 200, 200)));
         p.drawText(QRectF(pos.x(), pos.y(), tw, th), Qt::AlignCenter, text);
       }
       r = 0.65 * R;
@@ -144,9 +144,8 @@ void AttitudeIndicatorWidget::drawCompass(QPainter & p, const QRectF & r)
       const int tw = fm.horizontalAdvance(text);
       const int th = fm.height();
       const QPointF pos(c.x() + r * sa - tw / 2, c.y() - r * ca - th / 2);
-      const QRectF bb(pos.x(), pos.y(), tw, th);
-      p.setPen(QPen(QColor(200, 200, 200), 1.0 * scale_));
-      p.drawText(bb, Qt::AlignCenter, text);
+      p.setPen(QPen(QColor(255, 255, 255)));
+      p.drawText(QRectF(pos.x(), pos.y(), tw, th), Qt::AlignCenter, text);
       r = 0.85 * R;
       p1 = QPointF(c.x() + r * sa, c.y() - r * ca);
       p.setPen(QPen(QColor(255, 255, 255), 2.0 * scale_));
@@ -191,16 +190,14 @@ void AttitudeIndicatorWidget::drawHorizon(QPainter & p, const QRectF & r)
   QFontMetrics fm(p.font());
   const QPointF c = r.center();
   const double R = std::min(r.width(), r.height()) * 0.48;
-  const double rr = 0.75 * R;
   const double ppd = (2 * R) / 60.0;
-
   {
     p.save();
     p.translate(c);
     p.rotate(-rad2deg(roll_));
     {
-      p.save();
       {
+        p.save();
         QPainterPath clip;
         clip.addEllipse(QPointF(0, 0), R, R);
         p.setClipPath(clip);
@@ -215,21 +212,27 @@ void AttitudeIndicatorWidget::drawHorizon(QPainter & p, const QRectF & r)
         const double X = -R;
         p.fillRect(QRectF(X, -3 * R, W, 3 * R), skyGrad);
         p.fillRect(QRectF(X, 0, W, 3 * R), groundGrad);
-
         p.setPen(QPen(Qt::white, 2.0 * scale_));
         p.drawLine(QPointF(-R, 0), QPointF(R, 0));
-        p.setClipping(false);
+        p.restore();
       }
       {
+        p.save();
         QPainterPath clip;
-        clip.addEllipse(QPointF(0, -rad2deg(pitch_) * ppd), rr, rr);
+        clip.addEllipse(QPointF(0, 0), 0.6 * R, 0.6 * R);
         p.setClipPath(clip);
+        p.translate(0, rad2deg(pitch_) * ppd);
         for (int d = -60; d <= 60; d += 5) {
           const double y = -d * ppd;
           const bool major = (d % 10) == 0;
-          const double w = major ? 0.3 * R : 0.2 * R;
+          const double w = major ? 0.25 * R : 0.15 * R;
+          if (major) {
+            p.setPen(QPen(Qt::white, 2.0 * scale_));
+          } else {
+            p.setPen(QPen(Qt::white, 1.0 * scale_));
+          }
           p.drawLine(QPointF(-w, y), QPointF(w, y));
-          if (major && d != 0) {
+          if (d != 0) {
             const QString text = QString::number(std::abs(d));
             const int tw = fm.horizontalAdvance(text);
             const int th = fm.height();
@@ -240,45 +243,48 @@ void AttitudeIndicatorWidget::drawHorizon(QPainter & p, const QRectF & r)
           }
         }
         p.setClipping(false);
+        p.restore();
       }
-      p.restore();
+      {
+        p.save();
+        p.rotate(rad2deg(roll_));
+        p.setPen(QPen(QColor(254, 176, 0), 3.0 * scale_));
+        p.setBrush(QColor(254, 176, 0, 255));
+        p.drawLine(QPointF(-R * 0.3, 0), QPointF(0, 0));
+        p.drawLine(QPointF(R * 0.3, 0), QPointF(0, 0));
+        p.drawLine(QPointF(-R * 0.3, -R * 0.05), QPointF(-R * 0.3, 0));
+        p.drawLine(QPointF(R * 0.3, -R * 0.05), QPointF(R * 0.3, 0));
+        p.drawEllipse(QPointF(0, 0), 4.0 * scale_, 4.0 * scale_);
+        QPolygonF tri;
+        tri << QPointF(0, -R)
+            << QPointF(0.075 * R, -0.75 * R)
+            << QPointF(-0.075 * R, -0.75 * R);
+        p.drawPolygon(tri);
+        p.restore();
+      }
+      {
+        p.save();
+        p.setPen(QPen(Qt::white, 3.0 * scale_));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(0, 0), R, R);
+        p.restore();
+      }
     }
     p.setPen(QPen(QColor(255, 255, 255), 1.5 * scale_));
     std::vector<double> a = {0, 30, 60, 70, 80, 90, 100, 110, 120, 150, 180};
-    std::vector<double> w = {2, 2, 2, 1, 1, 2, 1, 1, 2, 2, 2};
-    std::vector<double> l = {0.95, 0.95, 0.95, 0.85, 0.85, 0.95, 0.85, 0.85, 0.95, 0.95, 0.95};
+    std::vector<double> w = {3, 2.5, 2, 1, 1, 2, 1, 1, 2, 2.5, 3};
+    std::vector<double> l = {0.75, 0.75, 0.75, 0.85, 0.85, 0.75, 0.85, 0.85, 0.75, 0.75, 0.75};
     for (size_t i = 0; i < a.size(); ++i) {
       const double rad = deg2rad(a[i] - 90);
       const double sa = std::sin(rad), ca = std::cos(rad);
-      const QPointF p1(rr * sa, -rr * ca);
+      const QPointF p1(R * sa, -R * ca);
       const QPointF p2(l[i] * R * sa, -l[i] * R * ca);
       p.setPen(QPen(QColor(255, 255, 255), w[i] * scale_));
       p.drawLine(p1, p2);
     }
     p.restore();
   }
-
-  p.setPen(QPen(QColor(255, 255, 0, 255), 3.0 * scale_));
-  p.setBrush(QColor(255, 255, 0, 255));
-  p.drawLine(QPointF(c.x() - R * 0.3, c.y()), QPointF(c.x(), c.y()));
-  p.drawLine(QPointF(c.x() + R * 0.3, c.y()), QPointF(c.x(), c.y()));
-  p.drawLine(QPointF(c.x() - R * 0.3, c.y() - R * 0.05),
-      QPointF(c.x() - R * 0.3, c.y() + R * 0.05));
-  p.drawLine(QPointF(c.x() + R * 0.3, c.y() - R * 0.05),
-      QPointF(c.x() + R * 0.3, c.y() + R * 0.05));
-  p.drawEllipse(c, 4.0 * scale_, 4.0 * scale_);
-  QPolygonF tri;
-  tri << QPointF(c.x(), c.y() - R)
-      << QPointF(c.x() + 0.075 * R, c.y() - 0.75 * R)
-      << QPointF(c.x() - 0.075 * R, c.y() - 0.75 * R);
-  p.drawPolygon(tri);
-
-  p.setBrush(Qt::NoBrush);
-  p.setPen(QPen(QColor(255, 255, 255), 3.0 * scale_));
-  p.drawEllipse(c, R, R);
 }
-
-/* =================== READOUT PILL =================== */
 
 void AttitudeIndicatorWidget::drawReadouts(QPainter & p, const QRect & pillRect, QFont & font)
 {

@@ -1,9 +1,7 @@
 #pragma once
 
-#include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
-
-#include <rviz_common/display_context.hpp>
+#include <tf2/LinearMath/Quaternion.h>
 #include <rviz_common/message_filter_display.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/int_property.hpp>

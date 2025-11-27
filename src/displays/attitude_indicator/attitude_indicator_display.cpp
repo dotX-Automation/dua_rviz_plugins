@@ -11,7 +11,7 @@ AttitudeIndicatorDisplay::AttitudeIndicatorDisplay()
   prop_scale_->setMax(3.0);
 
   prop_margin_ = new rviz_common::properties::IntProperty(
-    "Margin (px)", 10, "Distance from chosen corner", this);
+    "Margin", 10, "Distance from chosen corner", this);
   prop_margin_->setMin(0);
 
   prop_corner_ = new rviz_common::properties::EnumProperty(
@@ -41,17 +41,28 @@ void AttitudeIndicatorDisplay::onEnable()
 {
   rviz_common::MessageFilterDisplay<geometry_msgs::msg::PoseStamped>::onEnable();
   ensureOverlay();
-  if (overlay_) {overlay_->show();}
+  if (overlay_) {
+    overlay_->setAngles(yaw_, pitch_, roll_);
+    overlay_->show();
+  }
 }
 
 void AttitudeIndicatorDisplay::onDisable()
 {
-  if (overlay_) {overlay_->hide();}
+  roll_ = pitch_ = yaw_ = 0.0;
+  if (overlay_) {
+    overlay_->hide();
+    overlay_->setAngles(yaw_, pitch_, roll_);
+  }
   rviz_common::MessageFilterDisplay<geometry_msgs::msg::PoseStamped>::onDisable();
 }
 
 void AttitudeIndicatorDisplay::reset()
 {
+  roll_ = pitch_ = yaw_ = 0.0;
+  if (overlay_) {
+    overlay_->setAngles(yaw_, pitch_, roll_);
+  }
   rviz_common::MessageFilterDisplay<geometry_msgs::msg::PoseStamped>::reset();
 }
 
@@ -73,32 +84,29 @@ void AttitudeIndicatorDisplay::ensureOverlay()
 
   // Top-level floating tool window to avoid being clipped under RViz panes
   overlay_ = new AttitudeIndicatorWidget(nullptr);
-  overlay_->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+  overlay_->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
   overlay_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
   overlay_->setAttribute(Qt::WA_NoSystemBackground, true);
   overlay_->setAutoFillBackground(false);
   overlay_->show();
   overlay_->raise();
 
-  // Initial sync
   overlay_->setScale(prop_scale_->getFloat());
   overlay_->setMargin(prop_margin_->getInt());
   overlay_->setCorner(prop_corner_->getOptionInt());
 
-  // Anchor to the render panel area
   overlay_->setAnchorRect(QRect(rp->mapToGlobal(QPoint(0, 0)), rp->size()));
 
-  // Live bindings
   connect(prop_scale_, &rviz_common::properties::FloatProperty::changed, [this](){
       if(overlay_) {
         overlay_->setScale(prop_scale_->getFloat());
       }
-  });
+    });
   connect(prop_margin_, &rviz_common::properties::IntProperty::changed, [this](){
       if(overlay_) {
         overlay_->setMargin(prop_margin_->getInt());
       }
-  });
+    });
   connect(prop_corner_, &rviz_common::properties::EnumProperty::changed, [this](){
       if(overlay_) {
         overlay_->setCorner(prop_corner_->getOptionInt());
@@ -110,8 +118,16 @@ void AttitudeIndicatorDisplay::processMessage(geometry_msgs::msg::PoseStamped::C
 {
   const auto & q = msg->pose.orientation;
   tf2::Quaternion tq(q.x, q.y, q.z, q.w);
-  tf2::Matrix3x3(tq).getRPY(roll_, pitch_, yaw_);
-
+  const bool finite =
+    std::isfinite(tq.x()) && std::isfinite(tq.y()) &&
+    std::isfinite(tq.z()) && std::isfinite(tq.w());
+  const double len2 = tq.length2();
+  if (!finite || len2 <= 1e-12) {
+    roll_ = pitch_ = yaw_ = 0.0;
+  } else {
+    tq.normalize();
+    tf2::Matrix3x3(tq).getRPY(roll_, pitch_, yaw_);
+  }
   if (overlay_) {
     overlay_->setAngles(yaw_, pitch_, roll_);
   }
