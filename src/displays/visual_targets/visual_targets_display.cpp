@@ -62,7 +62,7 @@ void VisualTargetsDisplay::processMessage(
   std::string agent = msg->targets.header.frame_id;
 
   // Iterate over the detections and create interactive markers
-  for (const auto & detection : msg->targets.detections) {
+  for (const auto & detection : msg->targets.targets) {
     if (!detection.results.empty()) {
       // Decompress image
       cv::Mat frame;
