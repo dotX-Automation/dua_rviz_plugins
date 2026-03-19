@@ -41,8 +41,10 @@
 #include <rviz_common/ros_topic_display.hpp>
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/frame_manager_iface.hpp>
+#include <rviz_common/properties/int_property.hpp>
 
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 
@@ -64,10 +66,11 @@ namespace dua_rviz_plugins::displays::visual_targets
 {
 
 using geometry_msgs::msg::Pose;
+using sensor_msgs::msg::CompressedImage;
 using sensor_msgs::msg::Image;
 
-typedef std::tuple<std::string, Pose, Image> Info;
-typedef std::vector<Info> Infos;
+using Info = std::tuple<std::string, Pose, Image>;
+using Infos = std::deque<Info>;
 
 /**
  * @brief Display visual targets in RViz.
@@ -97,6 +100,12 @@ protected:
    */
   void processMessage(dua_mission_interfaces::msg::VisualTargets::ConstSharedPtr msg) override;
 
+private Q_SLOTS:
+  /**
+   * @brief Apply a new maximum number of cached images.
+   */
+  void updateMaxImages();
+
 private:
   /**
    * @brief Create an interactive marker.
@@ -115,10 +124,10 @@ private:
    */
   void showImage(const std::string & id);
 
-  std::string frame_id_;
   std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
   std::unordered_map<std::string, Infos> map_;
   std::mutex mutex_;
+  rviz_common::properties::IntProperty * max_images_property_;
 };
 
 }  // namespace dua_rviz_plugins::displays::visual_targets
