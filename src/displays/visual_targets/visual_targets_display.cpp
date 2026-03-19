@@ -28,8 +28,16 @@ namespace dua_rviz_plugins::displays::visual_targets
 {
 
 VisualTargetsDisplay::VisualTargetsDisplay()
-: rviz_common::RosTopicDisplay<dua_mission_interfaces::msg::VisualTargets>()
+: rviz_common::RosTopicDisplay<dua_mission_interfaces::msg::VisualTargets>(),
+  max_images_property_(nullptr)
 {
+  max_images_property_ = new rviz_common::properties::IntProperty(
+    "Max Images",
+    10,
+    "Maximum number of images stored per visual target.",
+    this,
+    SLOT(updateMaxImages()));
+  max_images_property_->setMin(1);
 }
 
 VisualTargetsDisplay::~VisualTargetsDisplay()
@@ -54,9 +62,13 @@ void VisualTargetsDisplay::onInitialize()
 void VisualTargetsDisplay::processMessage(
   dua_mission_interfaces::msg::VisualTargets::ConstSharedPtr msg)
 {
+  std::lock_guard<std::mutex> lock(mutex_);
+
   // Clear the server
-  mutex_.lock();
   server_->clear();
+
+  const auto max_images =
+    static_cast<std::size_t>(std::max(1, max_images_property_->getInt()));
 
   // Get the agent name from frame_id
   std::string agent = msg->targets.header.frame_id;
@@ -68,7 +80,7 @@ void VisualTargetsDisplay::processMessage(
       cv::Mat frame;
       Image::SharedPtr img_msg = nullptr;
       std::string encoding(sensor_msgs::image_encodings::BGR8);
-      if (!(msg->image.format.empty())) {
+      if (!msg->image.format.empty()) {
         size_t pos = msg->image.format.find(";");
         if (pos != std::string::npos) {
           encoding = msg->image.format.substr(0, pos);
@@ -81,7 +93,6 @@ void VisualTargetsDisplay::processMessage(
       } catch (const std::exception & e) {
         RCLCPP_ERROR(rclcpp::get_logger("VisualTargetsDisplay"), "Error processing image: %s",
             e.what());
-        mutex_.unlock();
         return;
       }
 
@@ -89,21 +100,37 @@ void VisualTargetsDisplay::processMessage(
       std::string id = detection.results[0].hypothesis.class_id;
       std::replace(id.begin(), id.end(), ' ', '_');
       const Info info = {agent, detection.results[0].pose.pose, *img_msg};
-      map_[id].push_back(info);
+      map_[id].push_front(info);
+      while (map_[id].size() > max_images) {
+        map_[id].pop_back();
+      }
     }
   }
   // Create interactive markers for each visual target
   for (const auto & entry : map_) {
     const auto & id = entry.first;
-    const Info & infos = entry.second.back();
-    const Pose & pose = std::get<1>(infos);
+    const Info & info = entry.second.front();
+    const Pose & pose = std::get<1>(info);
     createInteractiveMarker(
       pose,
       id);
   }
   // Update the server
   server_->applyChanges();
-  mutex_.unlock();
+}
+
+void VisualTargetsDisplay::updateMaxImages()
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  const auto max_images =
+    static_cast<std::size_t>(std::max(1, max_images_property_->getInt()));
+
+  for (auto & [id, infos] : map_) {
+    while (infos.size() > max_images) {
+      infos.pop_back();
+    }
+  }
 }
 
 void VisualTargetsDisplay::createInteractiveMarker(
@@ -212,13 +239,13 @@ void VisualTargetsDisplay::processFeedback(
 
 void VisualTargetsDisplay::showImage(const std::string & id)
 {
-  mutex_.lock();
+  std::lock_guard<std::mutex> lock(mutex_);
 
-  const Infos & infos = map_[id];
-  if (infos.empty()) {
-    mutex_.unlock();
+  const auto it = map_.find(id);
+  if (it == map_.end() || it->second.empty()) {
     return;
   }
+  const Infos & infos = it->second;
 
   // Create a dialog to display the images
   QDialog * dialog = new QDialog();
@@ -237,8 +264,7 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   scroll_layout->setContentsMargins(0, 0, 0, 0);
 
   // Iterate from latest to oldest
-  for (auto it = infos.rbegin(); it != infos.rend(); ++it) {
-    const Info & info = *it;
+  for (const auto & info : infos) {
     const sensor_msgs::msg::Image & image = std::get<2>(info);
     QImage qimage;
     const auto & encoding = image.encoding;
@@ -312,8 +338,6 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   dialog->setMinimumSize(640, 480);
   dialog->adjustSize();
   dialog->show();
-
-  mutex_.unlock();
 }
 
 }  // namespace dua_rviz_plugins::displays::visual_targets
