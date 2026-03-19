@@ -38,6 +38,7 @@ VisualTargetsDisplay::VisualTargetsDisplay()
     this,
     SLOT(updateMaxImages()));
   max_images_property_->setMin(1);
+  max_images_property_->setMax(50);
 }
 
 VisualTargetsDisplay::~VisualTargetsDisplay()
