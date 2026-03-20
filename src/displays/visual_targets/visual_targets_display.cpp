@@ -60,6 +60,32 @@ void VisualTargetsDisplay::onInitialize()
     node);
 }
 
+void VisualTargetsDisplay::onDisable()
+{
+  RosTopicDisplay::onDisable();
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  map_.clear();
+  if (server_) {
+    server_->clear();
+    server_->applyChanges();
+  }
+}
+
+void VisualTargetsDisplay::reset()
+{
+  RosTopicDisplay::reset();
+
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  map_.clear();
+  if (server_) {
+    server_->clear();
+    server_->applyChanges();
+  }
+}
+
 void VisualTargetsDisplay::processMessage(
   dua_mission_interfaces::msg::VisualTargets::ConstSharedPtr msg)
 {

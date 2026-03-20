@@ -3,7 +3,7 @@
  *
  * dotX Automation <info@dotxautomation.com>
  *
- *  February 17, 2025
+ * February 17, 2025
  */
 
 /**
@@ -85,6 +85,7 @@ public:
    * @brief Constructor.
    */
   VisualTargetsDisplay();
+
   /**
    * @brief Destructor.
    */
@@ -95,6 +96,17 @@ protected:
    * @brief Initialize the display.
    */
   void onInitialize() override;
+
+  /**
+   * @brief Disable the display.
+   */
+  void onDisable() override;
+
+  /**
+   * @brief Reset the display.
+   */
+  void reset() override;
+
   /**
    * @brief Process the received message.
    */
@@ -113,21 +125,24 @@ private:
   void createInteractiveMarker(
     const geometry_msgs::msg::Pose & pose,
     const std::string & id);
+
   /**
    * @brief Process the interactive marker feedback.
    */
   void processFeedback(
     const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback,
     const std::string & id);
+
   /**
    * @brief Show the image in a dialog.
    */
   void showImage(const std::string & id);
 
+  rviz_common::properties::IntProperty * max_images_property_;
+
   std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
   std::unordered_map<std::string, Infos> map_;
   std::mutex mutex_;
-  rviz_common::properties::IntProperty * max_images_property_;
 };
 
 }  // namespace dua_rviz_plugins::displays::visual_targets
