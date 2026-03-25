@@ -22,6 +22,9 @@
 
 #include <dua_rviz_plugins/displays/visual_targets/visual_targets_display.hpp>
 
+#include <functional>
+#include <utility>
+
 namespace dua_rviz_plugins::displays::visual_targets
 {
 
@@ -62,8 +65,11 @@ void VisualTargetsDisplay::onInitialize()
   RosTopicDisplay::onInitialize();
 
   auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
-  auto node = ros_node_abstraction->get_raw_node();
+  if (!ros_node_abstraction) {
+    return;
+  }
 
+  auto node = ros_node_abstraction->get_raw_node();
   server_ = std::make_shared<interactive_markers::InteractiveMarkerServer>(
     "visual_targets",
     node);
@@ -95,27 +101,33 @@ void VisualTargetsDisplay::reset()
   }
 }
 
+std::string VisualTargetsDisplay::makeTargetKey(
+  const std::string & class_id,
+  const std::string & target_id) const
+{
+  return class_id + "::" + target_id;
+}
+
 void VisualTargetsDisplay::processMessage(
   dua_mission_interfaces::msg::VisualTargets::ConstSharedPtr msg)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  if (!msg || !server_) {
+    return;
+  }
 
   auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
+  if (!ros_node_abstraction) {
+    return;
+  }
   auto node = ros_node_abstraction->get_raw_node();
   const rclcpp::Time now = node->get_clock()->now();
 
-  const auto max_images =
-    static_cast<std::size_t>(std::max(1, max_images_property_->getInt()));
-
-  const std::string & frame_id = msg->targets.header.frame_id;
-
-  // Decompress the shared scene image once, since all targets refer to the same image.
   cv::Mat frame;
   Image::SharedPtr scene_image_msg = nullptr;
   std::string encoding(sensor_msgs::image_encodings::BGR8);
 
   if (!msg->image.format.empty()) {
-    const std::size_t pos = msg->image.format.find(";");
+    const std::size_t pos = msg->image.format.find(';');
     if (pos != std::string::npos) {
       encoding = msg->image.format.substr(0, pos);
     }
@@ -134,7 +146,20 @@ void VisualTargetsDisplay::processMessage(
     return;
   }
 
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  const auto max_images =
+    static_cast<std::size_t>(std::max(1, max_images_property_->getInt()));
+  const std::string & frame_id = msg->targets.header.frame_id;
+
   for (const auto & target : msg->targets.targets) {
+    if (target.id.empty()) {
+      RCLCPP_WARN(
+        rclcpp::get_logger("VisualTargetsDisplay"),
+        "Skipping target with empty id.");
+      continue;
+    }
+
     if (target.results.empty()) {
       continue;
     }
@@ -142,34 +167,24 @@ void VisualTargetsDisplay::processMessage(
     const std::string & target_id = target.id;
     const std::string & class_id = target.results[0].hypothesis.class_id;
     const Pose & pose = target.results[0].pose.pose;
+    const std::string target_key = makeTargetKey(class_id, target_id);
 
     TargetInfo target_info = {frame_id, pose, *scene_image_msg};
 
-    auto target_it = targets_.find(target_id);
-    if (target_it == targets_.end()) {
-      TargetData target_data;
-      target_data.class_id = class_id;
-      target_data.frame_id = frame_id;
-      target_data.pose = pose;
-      target_data.history.push_front(target_info);
-      target_data.last_seen = now;
-      targets_.emplace(target_id, std::move(target_data));
-    } else {
-      TargetData & target_data = target_it->second;
-      target_data.class_id = class_id;
-      target_data.frame_id = frame_id;
-      target_data.pose = pose;
-      target_data.history.push_front(target_info);
-      target_data.last_seen = now;
+    auto [target_it, inserted] = targets_.try_emplace(
+      target_key,
+      TargetData{target_id, class_id, frame_id, pose, {}, now});
 
-      while (target_data.history.size() > max_images) {
-        target_data.history.pop_back();
-      }
-    }
+    TargetData & target_data = target_it->second;
+    target_data.target_id = target_id;
+    target_data.class_id = class_id;
+    target_data.frame_id = frame_id;
+    target_data.pose = pose;
+    target_data.last_seen = now;
+    target_data.history.push_front(std::move(target_info));
 
-    auto & history = targets_[target_id].history;
-    while (history.size() > max_images) {
-      history.pop_back();
+    while (target_data.history.size() > max_images) {
+      target_data.history.pop_back();
     }
   }
 
@@ -184,7 +199,7 @@ void VisualTargetsDisplay::updateMaxImages()
   const auto max_images =
     static_cast<std::size_t>(std::max(1, max_images_property_->getInt()));
 
-  for (auto & [target_id, target_data] : targets_) {
+  for (auto & [target_key, target_data] : targets_) {
     while (target_data.history.size() > max_images) {
       target_data.history.pop_back();
     }
@@ -193,23 +208,25 @@ void VisualTargetsDisplay::updateMaxImages()
 
 void VisualTargetsDisplay::updateTargetTimeout()
 {
-  std::lock_guard<std::mutex> lock(mutex_);
-
   if (!server_) {
     return;
   }
 
   auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
+  if (!ros_node_abstraction) {
+    return;
+  }
   auto node = ros_node_abstraction->get_raw_node();
   const rclcpp::Time now = node->get_clock()->now();
 
+  std::lock_guard<std::mutex> lock(mutex_);
   pruneStaleTargets(now);
   rebuildInteractiveMarkers();
 }
 
 void VisualTargetsDisplay::pruneStaleTargets(const rclcpp::Time & now)
 {
-  const double timeout = std::max(0.0f, target_timeout_property_->getFloat());
+  const double timeout = std::max(0.0, static_cast<double>(target_timeout_property_->getFloat()));
 
   for (auto it = targets_.begin(); it != targets_.end(); ) {
     const double age = (now - it->second.last_seen).seconds();
@@ -229,15 +246,15 @@ void VisualTargetsDisplay::rebuildInteractiveMarkers()
 
   server_->clear();
 
-  for (const auto & [target_id, target_data] : targets_) {
-    createInteractiveMarker(target_id, target_data);
+  for (const auto & [target_key, target_data] : targets_) {
+    createInteractiveMarker(target_key, target_data);
   }
 
   server_->applyChanges();
 }
 
 void VisualTargetsDisplay::createInteractiveMarker(
-  const std::string & target_id,
+  const std::string & target_key,
   const TargetData & target_data)
 {
   const Pose & pose = target_data.pose;
@@ -301,7 +318,7 @@ void VisualTargetsDisplay::createInteractiveMarker(
   }
 
   visualization_msgs::msg::InteractiveMarkerControl marker_control;
-  marker_control.set__name(target_id);
+  marker_control.set__name(target_key);
   marker_control.set__orientation_mode(
     visualization_msgs::msg::InteractiveMarkerControl::FIXED);
   marker_control.set__interaction_mode(
@@ -314,7 +331,7 @@ void VisualTargetsDisplay::createInteractiveMarker(
   interactive_marker.header.set__frame_id("map");
   interactive_marker.pose.set__position(pose.position);
   interactive_marker.pose.set__orientation(pose.orientation);
-  interactive_marker.set__name(target_id);
+  interactive_marker.set__name(target_key);
   interactive_marker.set__description(class_id);
   interactive_marker.set__scale(0.75);
   interactive_marker.controls.push_back(marker_control);
@@ -325,40 +342,44 @@ void VisualTargetsDisplay::createInteractiveMarker(
       &VisualTargetsDisplay::processFeedback,
       this,
       std::placeholders::_1,
-      target_id));
+      target_key));
 }
 
 void VisualTargetsDisplay::processFeedback(
   const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback,
-  const std::string & target_id)
+  const std::string & target_key)
 {
   if (feedback->event_type ==
     visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_DOWN)
   {
     QMetaObject::invokeMethod(
       this,
-      [this, target_id]() {showTargetImages(target_id);},
+      [this, target_key]() {showTargetImages(target_key);},
       Qt::QueuedConnection);
   }
 }
 
-void VisualTargetsDisplay::showTargetImages(const std::string & target_id)
+void VisualTargetsDisplay::showTargetImages(const std::string & target_key)
 {
-  std::lock_guard<std::mutex> lock(mutex_);
+  TargetData target_data;
 
-  const auto target_it = targets_.find(target_id);
-  if (target_it == targets_.end() || target_it->second.history.empty()) {
-    return;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    const auto target_it = targets_.find(target_key);
+    if (target_it == targets_.end() || target_it->second.history.empty()) {
+      return;
+    }
+
+    target_data = target_it->second;
   }
-
-  const TargetData & target_data = target_it->second;
-  const TargetHistory & history = target_data.history;
 
   QDialog * dialog = new QDialog();
   dialog->setAttribute(Qt::WA_DeleteOnClose);
 
   std::string title = target_data.class_id;
   std::replace(title.begin(), title.end(), '_', ' ');
+  title += " [" + target_data.target_id + "]";
   dialog->setWindowTitle(QString::fromStdString(title));
 
   QScrollArea * scroll_area = new QScrollArea(dialog);
@@ -366,7 +387,7 @@ void VisualTargetsDisplay::showTargetImages(const std::string & target_id)
   QVBoxLayout * scroll_layout = new QVBoxLayout(scroll_content);
   scroll_layout->setContentsMargins(0, 0, 0, 0);
 
-  for (const auto & target_info : history) {
+  for (const auto & target_info : target_data.history) {
     const std::string & frame_id = std::get<0>(target_info);
     const sensor_msgs::msg::Image & image = std::get<2>(target_info);
 
@@ -376,33 +397,33 @@ void VisualTargetsDisplay::showTargetImages(const std::string & target_id)
     if (encoding == sensor_msgs::image_encodings::RGB8) {
       qimage = QImage(
         image.data.data(),
-        image.width,
-        image.height,
+        static_cast<int>(image.width),
+        static_cast<int>(image.height),
         QImage::Format_RGB888);
     } else if (encoding == sensor_msgs::image_encodings::RGBA8) {
       qimage = QImage(
         image.data.data(),
-        image.width,
-        image.height,
+        static_cast<int>(image.width),
+        static_cast<int>(image.height),
         QImage::Format_RGBA8888);
     } else if (encoding == sensor_msgs::image_encodings::MONO8) {
       qimage = QImage(
         image.data.data(),
-        image.width,
-        image.height,
+        static_cast<int>(image.width),
+        static_cast<int>(image.height),
         QImage::Format_Grayscale8);
     } else if (encoding == sensor_msgs::image_encodings::BGR8) {
       QImage temp(
         image.data.data(),
-        image.width,
-        image.height,
+        static_cast<int>(image.width),
+        static_cast<int>(image.height),
         QImage::Format_RGB888);
       qimage = temp.rgbSwapped();
     } else if (encoding == sensor_msgs::image_encodings::BGRA8) {
       QImage temp(
         image.data.data(),
-        image.width,
-        image.height,
+        static_cast<int>(image.width),
+        static_cast<int>(image.height),
         QImage::Format_RGBA8888);
       qimage = temp.rgbSwapped();
     } else {

@@ -39,25 +39,26 @@
 #include <dua_qos_cpp/dua_qos.hpp>
 #include <dua_mission_interfaces/msg/visual_targets.hpp>
 
-#include <rviz_common/ros_topic_display.hpp>
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/frame_manager_iface.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/int_property.hpp>
+#include <rviz_common/ros_topic_display.hpp>
 
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/image_encodings.hpp>
 
 #include <QDialog>
 #include <QImage>
 #include <QLabel>
-#include <QObject>
-#include <QApplication>
 #include <QMetaObject>
+#include <QObject>
+#include <QPixmap>
 #include <QScrollArea>
 #include <QVBoxLayout>
+#include <QWidget>
 
 #include <interactive_markers/interactive_marker_server.hpp>
 #include <visualization_msgs/msg/interactive_marker.hpp>
@@ -80,6 +81,7 @@ using TargetHistory = std::deque<TargetInfo>;
  */
 struct TargetData
 {
+  std::string target_id;
   std::string class_id;
   std::string frame_id;
   Pose pose;
@@ -140,6 +142,13 @@ private Q_SLOTS:
 
 private:
   /**
+   * @brief Build the internal storage key for a target.
+   */
+  std::string makeTargetKey(
+    const std::string & class_id,
+    const std::string & target_id) const;
+
+  /**
    * @brief Remove stale targets according to the configured timeout.
    */
   void pruneStaleTargets(const rclcpp::Time & now);
@@ -153,7 +162,7 @@ private:
    * @brief Create an interactive marker for a target.
    */
   void createInteractiveMarker(
-    const std::string & target_id,
+    const std::string & target_key,
     const TargetData & target_data);
 
   /**
@@ -161,12 +170,12 @@ private:
    */
   void processFeedback(
     const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback,
-    const std::string & target_id);
+    const std::string & target_key);
 
   /**
    * @brief Show the target image history in a dialog.
    */
-  void showTargetImages(const std::string & target_id);
+  void showTargetImages(const std::string & target_key);
 
   rviz_common::properties::IntProperty * max_images_property_;
   rviz_common::properties::FloatProperty * target_timeout_property_;
