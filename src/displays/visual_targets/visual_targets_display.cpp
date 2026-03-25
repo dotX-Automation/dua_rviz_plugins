@@ -135,18 +135,7 @@ void VisualTargetsDisplay::processMessage(
   }
 
   for (const auto & target : msg->targets.targets) {
-    if (target.id.empty()) {
-      RCLCPP_WARN(
-        rclcpp::get_logger("VisualTargetsDisplay"),
-        "Skipping target with empty id.");
-      continue;
-    }
-
     if (target.results.empty()) {
-      RCLCPP_WARN(
-        rclcpp::get_logger("VisualTargetsDisplay"),
-        "Skipping target '%s' with empty results.",
-        target.id.c_str());
       continue;
     }
 
