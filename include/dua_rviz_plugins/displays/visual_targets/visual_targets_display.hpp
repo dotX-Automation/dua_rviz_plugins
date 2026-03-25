@@ -1,13 +1,11 @@
 /**
  * VisualTargetsDisplay header file.
  *
- * dotX Automation <info@dotxautomation.com>
- *
  * February 17, 2025
  */
 
 /**
- * Copyright 2024 dotX Automation s.r.l.
+ * Copyright 2026 dotX Automation s.r.l.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +23,14 @@
 #pragma once
 
 #include <algorithm>
+#include <deque>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 
 #include <dua_cv_bridge/dua_cv_bridge.hpp>
 
@@ -41,6 +42,7 @@
 #include <rviz_common/ros_topic_display.hpp>
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/frame_manager_iface.hpp>
+#include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/int_property.hpp>
 
 #include <rclcpp/rclcpp.hpp>
@@ -61,6 +63,7 @@
 #include <visualization_msgs/msg/interactive_marker.hpp>
 #include <visualization_msgs/msg/interactive_marker_control.hpp>
 #include <visualization_msgs/msg/interactive_marker_feedback.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 
 namespace dua_rviz_plugins::displays::visual_targets
 {
@@ -69,8 +72,20 @@ using geometry_msgs::msg::Pose;
 using sensor_msgs::msg::CompressedImage;
 using sensor_msgs::msg::Image;
 
-using Info = std::tuple<std::string, Pose, Image>;
-using Infos = std::deque<Info>;
+using TargetInfo = std::tuple<std::string, Pose, Image>;
+using TargetHistory = std::deque<TargetInfo>;
+
+/**
+ * @brief Stored data for a tracked visual target.
+ */
+struct TargetData
+{
+  std::string class_id;
+  std::string frame_id;
+  Pose pose;
+  TargetHistory history;
+  rclcpp::Time last_seen;
+};
 
 /**
  * @brief Display visual targets in RViz.
@@ -118,30 +133,46 @@ private Q_SLOTS:
    */
   void updateMaxImages();
 
+  /**
+   * @brief Apply the configured timeout and prune stale targets.
+   */
+  void updateTargetTimeout();
+
 private:
   /**
-   * @brief Create an interactive marker.
+   * @brief Remove stale targets according to the configured timeout.
+   */
+  void pruneStaleTargets(const rclcpp::Time & now);
+
+  /**
+   * @brief Rebuild all interactive markers from the stored targets.
+   */
+  void rebuildInteractiveMarkers();
+
+  /**
+   * @brief Create an interactive marker for a target.
    */
   void createInteractiveMarker(
-    const geometry_msgs::msg::Pose & pose,
-    const std::string & id);
+    const std::string & target_id,
+    const TargetData & target_data);
 
   /**
    * @brief Process the interactive marker feedback.
    */
   void processFeedback(
     const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback,
-    const std::string & id);
+    const std::string & target_id);
 
   /**
-   * @brief Show the image in a dialog.
+   * @brief Show the target image history in a dialog.
    */
-  void showImage(const std::string & id);
+  void showTargetImages(const std::string & target_id);
 
   rviz_common::properties::IntProperty * max_images_property_;
+  rviz_common::properties::FloatProperty * target_timeout_property_;
 
   std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
-  std::unordered_map<std::string, Infos> map_;
+  std::unordered_map<std::string, TargetData> targets_;
   std::mutex mutex_;
 };
 

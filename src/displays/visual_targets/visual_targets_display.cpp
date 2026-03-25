@@ -1,13 +1,11 @@
 /**
  * VisualTargetsDisplay class source file.
  *
- * dotX Automation <info@dotxautomation.com>
- *
- *  February 17, 2025
+ * February 17, 2025
  */
 
 /**
- * Copyright 2024 dotX Automation s.r.l.
+ * Copyright 2026 dotX Automation s.r.l.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +27,8 @@ namespace dua_rviz_plugins::displays::visual_targets
 
 VisualTargetsDisplay::VisualTargetsDisplay()
 : rviz_common::RosTopicDisplay<dua_mission_interfaces::msg::VisualTargets>(),
-  max_images_property_(nullptr)
+  max_images_property_(nullptr),
+  target_timeout_property_(nullptr)
 {
   max_images_property_ = new rviz_common::properties::IntProperty(
     "Max Images",
@@ -39,12 +38,20 @@ VisualTargetsDisplay::VisualTargetsDisplay()
     SLOT(updateMaxImages()));
   max_images_property_->setMin(1);
   max_images_property_->setMax(50);
+
+  target_timeout_property_ = new rviz_common::properties::FloatProperty(
+    "Target Timeout (s)",
+    5.0,
+    "How long to keep an unseen target before removing it.",
+    this,
+    SLOT(updateTargetTimeout()));
+  target_timeout_property_->setMin(0.0);
+  target_timeout_property_->setMax(60.0);
 }
 
 VisualTargetsDisplay::~VisualTargetsDisplay()
 {
-  // Clear the server
-  if (initialized()) {
+  if (initialized() && server_) {
     server_->clear();
     server_->applyChanges();
   }
@@ -53,8 +60,10 @@ VisualTargetsDisplay::~VisualTargetsDisplay()
 void VisualTargetsDisplay::onInitialize()
 {
   RosTopicDisplay::onInitialize();
+
   auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
   auto node = ros_node_abstraction->get_raw_node();
+
   server_ = std::make_shared<interactive_markers::InteractiveMarkerServer>(
     "visual_targets",
     node);
@@ -66,7 +75,7 @@ void VisualTargetsDisplay::onDisable()
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  map_.clear();
+  targets_.clear();
   if (server_) {
     server_->clear();
     server_->applyChanges();
@@ -79,7 +88,7 @@ void VisualTargetsDisplay::reset()
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  map_.clear();
+  targets_.clear();
   if (server_) {
     server_->clear();
     server_->applyChanges();
@@ -91,59 +100,92 @@ void VisualTargetsDisplay::processMessage(
 {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  // Clear the server
-  server_->clear();
+  auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
+  auto node = ros_node_abstraction->get_raw_node();
+  const rclcpp::Time now = node->get_clock()->now();
 
   const auto max_images =
     static_cast<std::size_t>(std::max(1, max_images_property_->getInt()));
 
-  // Get the agent name from frame_id
-  std::string agent = msg->targets.header.frame_id;
+  const std::string & frame_id = msg->targets.header.frame_id;
 
-  // Iterate over the detections and create interactive markers
-  for (const auto & detection : msg->targets.targets) {
-    if (!detection.results.empty()) {
-      // Decompress image
-      cv::Mat frame;
-      Image::SharedPtr img_msg = nullptr;
-      std::string encoding(sensor_msgs::image_encodings::BGR8);
-      if (!msg->image.format.empty()) {
-        size_t pos = msg->image.format.find(";");
-        if (pos != std::string::npos) {
-          encoding = msg->image.format.substr(0, pos);
-        }
-      }
-      try {
-        CompressedImage::ConstSharedPtr img_ptr = std::make_shared<CompressedImage>(msg->image);
-        dua_cv_bridge::compressed_msg_to_frame(img_ptr, frame);
-        img_msg = dua_cv_bridge::frame_to_msg(frame, encoding);
-      } catch (const std::exception & e) {
-        RCLCPP_ERROR(rclcpp::get_logger("VisualTargetsDisplay"), "Error processing image: %s",
-            e.what());
-        return;
-      }
+  // Decompress the shared scene image once, since all targets refer to the same image.
+  cv::Mat frame;
+  Image::SharedPtr scene_image_msg = nullptr;
+  std::string encoding(sensor_msgs::image_encodings::BGR8);
 
-      // Save target data
-      std::string id = detection.results[0].hypothesis.class_id;
-      std::replace(id.begin(), id.end(), ' ', '_');
-      const Info info = {agent, detection.results[0].pose.pose, *img_msg};
-      map_[id].push_front(info);
-      while (map_[id].size() > max_images) {
-        map_[id].pop_back();
-      }
+  if (!msg->image.format.empty()) {
+    const std::size_t pos = msg->image.format.find(";");
+    if (pos != std::string::npos) {
+      encoding = msg->image.format.substr(0, pos);
     }
   }
-  // Create interactive markers for each visual target
-  for (const auto & entry : map_) {
-    const auto & id = entry.first;
-    const Info & info = entry.second.front();
-    const Pose & pose = std::get<1>(info);
-    createInteractiveMarker(
-      pose,
-      id);
+
+  try {
+    CompressedImage::ConstSharedPtr image_ptr =
+      std::make_shared<CompressedImage>(msg->image);
+    dua_cv_bridge::compressed_msg_to_frame(image_ptr, frame);
+    scene_image_msg = dua_cv_bridge::frame_to_msg(frame, encoding);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("VisualTargetsDisplay"),
+      "Error processing image: %s",
+      e.what());
+    return;
   }
-  // Update the server
-  server_->applyChanges();
+
+  for (const auto & target : msg->targets.targets) {
+    if (target.id.empty()) {
+      RCLCPP_WARN(
+        rclcpp::get_logger("VisualTargetsDisplay"),
+        "Skipping target with empty id.");
+      continue;
+    }
+
+    if (target.results.empty()) {
+      RCLCPP_WARN(
+        rclcpp::get_logger("VisualTargetsDisplay"),
+        "Skipping target '%s' with empty results.",
+        target.id.c_str());
+      continue;
+    }
+
+    const std::string & target_id = target.id;
+    const std::string & class_id = target.results[0].hypothesis.class_id;
+    const Pose & pose = target.results[0].pose.pose;
+
+    TargetInfo target_info = {frame_id, pose, *scene_image_msg};
+
+    auto target_it = targets_.find(target_id);
+    if (target_it == targets_.end()) {
+      TargetData target_data;
+      target_data.class_id = class_id;
+      target_data.frame_id = frame_id;
+      target_data.pose = pose;
+      target_data.history.push_front(target_info);
+      target_data.last_seen = now;
+      targets_.emplace(target_id, std::move(target_data));
+    } else {
+      TargetData & target_data = target_it->second;
+      target_data.class_id = class_id;
+      target_data.frame_id = frame_id;
+      target_data.pose = pose;
+      target_data.history.push_front(target_info);
+      target_data.last_seen = now;
+
+      while (target_data.history.size() > max_images) {
+        target_data.history.pop_back();
+      }
+    }
+
+    auto & history = targets_[target_id].history;
+    while (history.size() > max_images) {
+      history.pop_back();
+    }
+  }
+
+  pruneStaleTargets(now);
+  rebuildInteractiveMarkers();
 }
 
 void VisualTargetsDisplay::updateMaxImages()
@@ -153,18 +195,65 @@ void VisualTargetsDisplay::updateMaxImages()
   const auto max_images =
     static_cast<std::size_t>(std::max(1, max_images_property_->getInt()));
 
-  for (auto & [id, infos] : map_) {
-    while (infos.size() > max_images) {
-      infos.pop_back();
+  for (auto & [target_id, target_data] : targets_) {
+    while (target_data.history.size() > max_images) {
+      target_data.history.pop_back();
     }
   }
 }
 
-void VisualTargetsDisplay::createInteractiveMarker(
-  const geometry_msgs::msg::Pose & pose,
-  const std::string & id)
+void VisualTargetsDisplay::updateTargetTimeout()
 {
-  // Create a marker for the visual target
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  if (!server_) {
+    return;
+  }
+
+  auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
+  auto node = ros_node_abstraction->get_raw_node();
+  const rclcpp::Time now = node->get_clock()->now();
+
+  pruneStaleTargets(now);
+  rebuildInteractiveMarkers();
+}
+
+void VisualTargetsDisplay::pruneStaleTargets(const rclcpp::Time & now)
+{
+  const double timeout = std::max(0.0f, target_timeout_property_->getFloat());
+
+  for (auto it = targets_.begin(); it != targets_.end(); ) {
+    const double age = (now - it->second.last_seen).seconds();
+    if (age > timeout) {
+      it = targets_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void VisualTargetsDisplay::rebuildInteractiveMarkers()
+{
+  if (!server_) {
+    return;
+  }
+
+  server_->clear();
+
+  for (const auto & [target_id, target_data] : targets_) {
+    createInteractiveMarker(target_id, target_data);
+  }
+
+  server_->applyChanges();
+}
+
+void VisualTargetsDisplay::createInteractiveMarker(
+  const std::string & target_id,
+  const TargetData & target_data)
+{
+  const Pose & pose = target_data.pose;
+  const std::string & class_id = target_data.class_id;
+
   visualization_msgs::msg::Marker marker;
   marker.header.set__stamp(rclcpp::Time(0));
   marker.header.set__frame_id("map");
@@ -172,8 +261,7 @@ void VisualTargetsDisplay::createInteractiveMarker(
   marker.pose.set__position(pose.position);
   marker.pose.set__orientation(pose.orientation);
 
-  if (id.find("ArUco") != std::string::npos) {
-    // Create a marker for the ArUco marker
+  if (class_id.find("ArUco") != std::string::npos) {
     marker.set__type(visualization_msgs::msg::Marker::SPHERE);
     marker.scale.set__x(1.0);
     marker.scale.set__y(1.0);
@@ -182,8 +270,7 @@ void VisualTargetsDisplay::createInteractiveMarker(
     marker.color.set__g(0.0);
     marker.color.set__b(0.0);
     marker.color.set__a(1.0);
-  } else if (id.find("QR") != std::string::npos) {
-    // Create a marker for the QR code
+  } else if (class_id.find("QR") != std::string::npos) {
     marker.set__type(visualization_msgs::msg::Marker::SPHERE);
     marker.scale.set__x(1.0);
     marker.scale.set__y(1.0);
@@ -193,13 +280,15 @@ void VisualTargetsDisplay::createInteractiveMarker(
     marker.color.set__b(1.0);
     marker.color.set__a(1.0);
   } else {
-    std::string base_path = (
-      std::filesystem::path(__FILE__).parent_path() / "../../../dae/").string();
-    std::string mesh_resource =
-      "file:///" + base_path + id + ".dae";
-    std::string local_path = mesh_resource.substr(7);
+    std::string sanitized_class_id = class_id;
+    std::replace(sanitized_class_id.begin(), sanitized_class_id.end(), ' ', '_');
+
+    const std::string base_path =
+      (std::filesystem::path(__FILE__).parent_path() / "../../../dae/").string();
+    const std::string mesh_resource = "file:///" + base_path + sanitized_class_id + ".dae";
+    const std::string local_path = mesh_resource.substr(7);
+
     if (std::filesystem::exists(local_path)) {
-      // Create a marker for the COLLADA model
       marker.set__type(visualization_msgs::msg::Marker::MESH_RESOURCE);
       marker.scale.set__x(1.0);
       marker.scale.set__y(1.0);
@@ -211,7 +300,6 @@ void VisualTargetsDisplay::createInteractiveMarker(
       marker.set__mesh_resource(mesh_resource);
       marker.set__mesh_use_embedded_materials(true);
     } else {
-      // Create a fallback marker for the COLLADA model
       marker.set__type(visualization_msgs::msg::Marker::SPHERE);
       marker.scale.set__x(1.0);
       marker.scale.set__y(1.0);
@@ -223,80 +311,79 @@ void VisualTargetsDisplay::createInteractiveMarker(
     }
   }
 
-  // Create a control for the marker
-  visualization_msgs::msg::InteractiveMarkerControl mesh_control;
-  mesh_control.set__name(id);
-  mesh_control.set__orientation_mode(visualization_msgs::msg::InteractiveMarkerControl::FIXED);
-  mesh_control.set__interaction_mode(visualization_msgs::msg::InteractiveMarkerControl::BUTTON);
-  mesh_control.set__always_visible(true);
-  mesh_control.markers.push_back(marker);
+  visualization_msgs::msg::InteractiveMarkerControl marker_control;
+  marker_control.set__name(target_id);
+  marker_control.set__orientation_mode(
+    visualization_msgs::msg::InteractiveMarkerControl::FIXED);
+  marker_control.set__interaction_mode(
+    visualization_msgs::msg::InteractiveMarkerControl::BUTTON);
+  marker_control.set__always_visible(true);
+  marker_control.markers.push_back(marker);
 
-  // Create an interactive marker
-  visualization_msgs::msg::InteractiveMarker int_marker;
-  int_marker.header.set__stamp(rclcpp::Time(0));
-  int_marker.header.set__frame_id("map");
-  int_marker.pose.set__position(pose.position);
-  int_marker.set__name(id);
-  int_marker.set__description(id);
-  int_marker.set__scale(0.75);
-  int_marker.controls.push_back(mesh_control);
+  visualization_msgs::msg::InteractiveMarker interactive_marker;
+  interactive_marker.header.set__stamp(rclcpp::Time(0));
+  interactive_marker.header.set__frame_id("map");
+  interactive_marker.pose.set__position(pose.position);
+  interactive_marker.pose.set__orientation(pose.orientation);
+  interactive_marker.set__name(target_id);
+  interactive_marker.set__description(class_id);
+  interactive_marker.set__scale(0.75);
+  interactive_marker.controls.push_back(marker_control);
 
-  // Insert the interactive marker into the server and set the callback
   server_->insert(
-    int_marker,
-    std::bind(&VisualTargetsDisplay::processFeedback,
+    interactive_marker,
+    std::bind(
+      &VisualTargetsDisplay::processFeedback,
       this,
       std::placeholders::_1,
-      id));
+      target_id));
 }
 
 void VisualTargetsDisplay::processFeedback(
   const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback,
-  const std::string & id)
+  const std::string & target_id)
 {
-  // Process the feedback
-  if (feedback->event_type == visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_DOWN) {
-    // Since this callback is in a different thread, use Qt's signal-slot mechanism
+  if (feedback->event_type ==
+    visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_DOWN)
+  {
     QMetaObject::invokeMethod(
       this,
-      [this, id]() {this->showImage(id);},
+      [this, target_id]() {showTargetImages(target_id);},
       Qt::QueuedConnection);
   }
 }
 
-void VisualTargetsDisplay::showImage(const std::string & id)
+void VisualTargetsDisplay::showTargetImages(const std::string & target_id)
 {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  const auto it = map_.find(id);
-  if (it == map_.end() || it->second.empty()) {
+  const auto target_it = targets_.find(target_id);
+  if (target_it == targets_.end() || target_it->second.history.empty()) {
     return;
   }
-  const Infos & infos = it->second;
 
-  // Create a dialog to display the images
+  const TargetData & target_data = target_it->second;
+  const TargetHistory & history = target_data.history;
+
   QDialog * dialog = new QDialog();
   dialog->setAttribute(Qt::WA_DeleteOnClose);
 
-  // Set the dialog title using the class_id
-  std::string class_id = id;
-  std::replace(class_id.begin(), class_id.end(), '_', ' ');
-  std::transform(class_id.begin(), class_id.end(), class_id.begin(), ::toupper);
-  dialog->setWindowTitle(QString::fromStdString(class_id));
+  std::string title = target_data.class_id;
+  std::replace(title.begin(), title.end(), '_', ' ');
+  dialog->setWindowTitle(QString::fromStdString(title));
 
-  // Create a scrollable area
   QScrollArea * scroll_area = new QScrollArea(dialog);
   QWidget * scroll_content = new QWidget(scroll_area);
   QVBoxLayout * scroll_layout = new QVBoxLayout(scroll_content);
   scroll_layout->setContentsMargins(0, 0, 0, 0);
 
-  // Iterate from latest to oldest
-  for (const auto & info : infos) {
-    const sensor_msgs::msg::Image & image = std::get<2>(info);
+  for (const auto & target_info : history) {
+    const std::string & frame_id = std::get<0>(target_info);
+    const sensor_msgs::msg::Image & image = std::get<2>(target_info);
+
     QImage qimage;
     const auto & encoding = image.encoding;
 
-    // Convert the image data to QImage
     if (encoding == sensor_msgs::image_encodings::RGB8) {
       qimage = QImage(
         image.data.data(),
@@ -330,24 +417,25 @@ void VisualTargetsDisplay::showImage(const std::string & id)
         QImage::Format_RGBA8888);
       qimage = temp.rgbSwapped();
     } else {
-      continue;  // Skip unsupported formats
+      continue;
     }
-    qimage = qimage.copy();  // Ensure data ownership
 
-    // Create layout for this image and its label
+    qimage = qimage.copy();
+
     QVBoxLayout * entry_layout = new QVBoxLayout();
     entry_layout->setAlignment(Qt::AlignTop);
-    QLabel * agent_label = new QLabel(QString::fromStdString(std::get<0>(info)));
-    agent_label->setAlignment(Qt::AlignCenter);
-    agent_label->setStyleSheet("font-weight: bold; margin: 2px;");
-    entry_layout->addWidget(agent_label);
+
+    QLabel * frame_label = new QLabel(QString::fromStdString(frame_id));
+    frame_label->setAlignment(Qt::AlignCenter);
+    frame_label->setStyleSheet("font-weight: bold; margin: 2px;");
+    entry_layout->addWidget(frame_label);
 
     QLabel * image_label = new QLabel();
-    image_label->setPixmap(QPixmap::fromImage(qimage).scaledToWidth(640, Qt::SmoothTransformation));
+    image_label->setPixmap(
+      QPixmap::fromImage(qimage).scaledToWidth(640, Qt::SmoothTransformation));
     image_label->setAlignment(Qt::AlignCenter);
     entry_layout->addWidget(image_label);
 
-    // Wrap entry layout in a QWidget and add to scroll layout
     QWidget * entry_widget = new QWidget();
     entry_widget->setLayout(entry_layout);
     scroll_layout->addWidget(entry_widget);
@@ -357,7 +445,6 @@ void VisualTargetsDisplay::showImage(const std::string & id)
   scroll_area->setWidget(scroll_content);
   scroll_area->setWidgetResizable(true);
 
-  // Final layout for dialog
   QVBoxLayout * dialog_layout = new QVBoxLayout(dialog);
   dialog_layout->addWidget(scroll_area);
   dialog->setLayout(dialog_layout);
@@ -370,5 +457,6 @@ void VisualTargetsDisplay::showImage(const std::string & id)
 }  // namespace dua_rviz_plugins::displays::visual_targets
 
 #include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(dua_rviz_plugins::displays::visual_targets::VisualTargetsDisplay,
+PLUGINLIB_EXPORT_CLASS(
+  dua_rviz_plugins::displays::visual_targets::VisualTargetsDisplay,
   rviz_common::Display)
