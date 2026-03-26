@@ -419,9 +419,7 @@ void VisualTargetsDisplay::processFeedback(
     return;
   }
 
-  if (feedback->event_type ==
-    visualization_msgs::msg::InteractiveMarkerFeedback::BUTTON_CLICK)
-  {
+  if (feedback->event_type == visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_DOWN) {
     QMetaObject::invokeMethod(
       this,
       [this, target_key]() {showTargetImages(target_key);},
