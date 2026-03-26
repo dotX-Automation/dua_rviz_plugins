@@ -217,6 +217,20 @@ private:
    */
   static QImage imageMsgToQImage(const Image & image);
 
+  /**
+   * @brief Filter target position with exponential smoothing.
+   */
+  geometry_msgs::msg::Point filterPosition(
+    const geometry_msgs::msg::Point & previous,
+    const geometry_msgs::msg::Point & current) const;
+
+  /**
+   * @brief Return whether the position filter should be reset.
+   */
+  bool shouldResetPositionFilter(
+    const TargetData & target_data,
+    const rclcpp::Time & now) const;
+
 
   rviz_common::properties::IntProperty * max_images_prop_;
   std::size_t maxImages() const
@@ -230,6 +244,11 @@ private:
     return std::max(0.0, static_cast<double>(target_timeout_prop_->getFloat()));
   }
 
+  rviz_common::properties::FloatProperty * position_filter_alpha_prop_;
+  double positionFilterAlpha() const
+  {
+    return std::clamp(static_cast<double>(position_filter_alpha_prop_->getFloat()), 0.0, 1.0);
+  }
 
   std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
   TargetMap targets_;
