@@ -35,7 +35,8 @@ namespace dua_rviz_plugins::displays::visual_targets
 VisualTargetsDisplay::VisualTargetsDisplay()
 : rviz_common::RosTopicDisplay<VisualTargets>(),
   max_images_prop_(nullptr),
-  target_timeout_prop_(nullptr)
+  target_timeout_prop_(nullptr),
+  position_filter_alpha_prop_(nullptr)
 {
   max_images_prop_ = new rviz_common::properties::IntProperty(
     "Max Images",
@@ -54,6 +55,15 @@ VisualTargetsDisplay::VisualTargetsDisplay()
     SLOT(updateTargetTimeout()));
   target_timeout_prop_->setMin(0.0);
   target_timeout_prop_->setMax(60.0);
+
+  position_filter_alpha_prop_ = new rviz_common::properties::FloatProperty(
+    "Position Filter Alpha",
+    0.2,
+    "Exponential smoothing factor for target position. "
+    "Lower values are smoother but slower.",
+    this);
+  position_filter_alpha_prop_->setMin(0.0);
+  position_filter_alpha_prop_->setMax(1.0);
 }
 
 VisualTargetsDisplay::~VisualTargetsDisplay()
@@ -177,7 +187,7 @@ void VisualTargetsDisplay::processMessage(VisualTargets::ConstSharedPtr msg)
       const std::string & target_id = target.id;
       const std::string & class_id = result.hypothesis.class_id;
       const std::string frame_id = msg->targets.header.frame_id;
-      const Pose & pose = result.pose.pose;
+      const Pose & raw_pose = result.pose.pose;
 
       const std::string target_key = makeTargetKey(target_id, class_id);
       auto [it, inserted] = targets_.try_emplace(
@@ -186,23 +196,33 @@ void VisualTargetsDisplay::processMessage(VisualTargets::ConstSharedPtr msg)
           target_id,
           class_id,
           frame_id,
-          pose,
+          raw_pose,
           {},
           now});
 
-      (void)inserted;
-
       TargetData & target_data = it->second;
+
+      const bool reset_filter = inserted || shouldResetPositionFilter(target_data, now);
+
+      const auto previous_filtered_position = target_data.pose.position;
+
       target_data.target_id = target_id;
       target_data.class_id = class_id;
       target_data.frame_id = frame_id;
-      target_data.pose = pose;
+      target_data.pose = raw_pose;
+
+      if (!reset_filter) {
+        target_data.pose.position = filterPosition(
+          previous_filtered_position,
+          raw_pose.position);
+      }
+
       target_data.last_seen = now;
 
       target_data.history.push_front(
         TargetSnapshot{
           frame_id,
-          pose,
+          target_data.pose,
           now,
           scene_image_msg});
 
@@ -557,6 +577,27 @@ QImage VisualTargetsDisplay::imageMsgToQImage(const Image & image)
   }
 
   return {};
+}
+
+geometry_msgs::msg::Point VisualTargetsDisplay::filterPosition(
+  const geometry_msgs::msg::Point & previous,
+  const geometry_msgs::msg::Point & current) const
+{
+  const double alpha = positionFilterAlpha();
+
+  geometry_msgs::msg::Point filtered;
+  filtered.x = previous.x + alpha * (current.x - previous.x);
+  filtered.y = previous.y + alpha * (current.y - previous.y);
+  filtered.z = previous.z + alpha * (current.z - previous.z);
+  return filtered;
+}
+
+bool VisualTargetsDisplay::shouldResetPositionFilter(
+  const TargetData & target_data,
+  const rclcpp::Time & now) const
+{
+  const double age = (now - target_data.last_seen).seconds();
+  return age > targetTimeoutSeconds();
 }
 
 }  // namespace dua_rviz_plugins::displays::visual_targets
