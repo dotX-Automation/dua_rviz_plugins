@@ -22,25 +22,24 @@
 
 #pragma once
 
-#include <algorithm>
 #include <deque>
 #include <filesystem>
 #include <memory>
 #include <mutex>
-#include <stdexcept>
+#include <optional>
 #include <string>
-#include <tuple>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <dua_cv_bridge/dua_cv_bridge.hpp>
 
 #include <opencv2/core.hpp>
 
-#include <dua_qos_cpp/dua_qos.hpp>
 #include <dua_mission_interfaces/msg/visual_targets.hpp>
 
-#include <rviz_common/display_context.hpp>
-#include <rviz_common/frame_manager_iface.hpp>
+#include <geometry_msgs/msg/pose.hpp>
+
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/int_property.hpp>
 #include <rviz_common/ros_topic_display.hpp>
@@ -54,7 +53,6 @@
 #include <QImage>
 #include <QLabel>
 #include <QMetaObject>
-#include <QObject>
 #include <QPixmap>
 #include <QScrollArea>
 #include <QVBoxLayout>
@@ -69,12 +67,26 @@
 namespace dua_rviz_plugins::displays::visual_targets
 {
 
+using dua_mission_interfaces::msg::VisualTargets;
 using geometry_msgs::msg::Pose;
 using sensor_msgs::msg::CompressedImage;
 using sensor_msgs::msg::Image;
 
-using TargetInfo = std::tuple<std::string, Pose, Image>;
-using TargetHistory = std::deque<TargetInfo>;
+/**
+ * @brief One historical observation of a target.
+ *
+ * The image pointer is shared so that a single scene snapshot can be reused
+ * across multiple targets detected in the same incoming message.
+ */
+struct TargetSnapshot
+{
+  std::string frame_id;
+  Pose pose;
+  rclcpp::Time stamp;
+  std::shared_ptr<Image> image;
+};
+
+using TargetHistory = std::deque<TargetSnapshot>;
 
 /**
  * @brief Stored data for a tracked visual target.
@@ -93,7 +105,7 @@ struct TargetData
  * @brief Display visual targets in RViz.
  */
 class VisualTargetsDisplay
-  : public rviz_common::RosTopicDisplay<dua_mission_interfaces::msg::VisualTargets>
+  : public rviz_common::RosTopicDisplay<VisualTargets>
 {
   Q_OBJECT
 
@@ -127,7 +139,7 @@ protected:
   /**
    * @brief Process the received message.
    */
-  void processMessage(dua_mission_interfaces::msg::VisualTargets::ConstSharedPtr msg) override;
+  void processMessage(VisualTargets::ConstSharedPtr msg) override;
 
 private Q_SLOTS:
   /**
@@ -141,22 +153,33 @@ private Q_SLOTS:
   void updateTargetTimeout();
 
 private:
+  using TargetMap = std::unordered_map<std::string, TargetData>;
+  using TargetList = std::vector<std::pair<std::string, TargetData>>;
+
   /**
    * @brief Build the internal storage key for a target.
    */
   std::string makeTargetKey(
-    const std::string & class_id,
-    const std::string & target_id) const;
+    const std::string & target_id,
+    const std::string & class_id) const
+  {
+    return class_id + "::" + target_id;
+  }
 
   /**
    * @brief Remove stale targets according to the configured timeout.
    */
-  void pruneStaleTargets(const rclcpp::Time & now);
+  void pruneStaleTargetsLocked(const rclcpp::Time & now);
 
   /**
-   * @brief Rebuild all interactive markers from the stored targets.
+   * @brief Return a copy of all targets for lock-free marker rebuilding.
    */
-  void rebuildInteractiveMarkers();
+  TargetList snapshotTargetsLocked() const;
+
+  /**
+   * @brief Rebuild all interactive markers from a target snapshot.
+   */
+  void rebuildInteractiveMarkers(const TargetList & targets);
 
   /**
    * @brief Create an interactive marker for a target.
@@ -164,6 +187,18 @@ private:
   void createInteractiveMarker(
     const std::string & target_key,
     const TargetData & target_data);
+
+  /**
+   * @brief Build a visualization marker for a target.
+   */
+  visualization_msgs::msg::Marker makeMarker(
+    const TargetData & target_data) const;
+
+  /**
+   * @brief Resolve a mesh resource for a class id, if available.
+   */
+  std::optional<std::string> resolveMeshResource(
+    const std::string & class_id) const;
 
   /**
    * @brief Process the interactive marker feedback.
@@ -177,12 +212,28 @@ private:
    */
   void showTargetImages(const std::string & target_key);
 
-  rviz_common::properties::IntProperty * max_images_property_;
-  rviz_common::properties::FloatProperty * target_timeout_property_;
+  /**
+   * @brief Convert a ROS image message into QImage.
+   */
+  static QImage imageMsgToQImage(const Image & image);
+
+
+  rviz_common::properties::IntProperty * max_images_prop_;
+  std::size_t maxImages() const
+  {
+    return static_cast<std::size_t>(std::max(1, max_images_prop_->getInt()));
+  }
+
+  rviz_common::properties::FloatProperty * target_timeout_prop_;
+  double targetTimeoutSeconds() const
+  {
+    return std::max(0.0, static_cast<double>(target_timeout_prop_->getFloat()));
+  }
+
 
   std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
-  std::unordered_map<std::string, TargetData> targets_;
-  std::mutex mutex_;
+  TargetMap targets_;
+  mutable std::mutex mutex_;
 };
 
 }  // namespace dua_rviz_plugins::displays::visual_targets
