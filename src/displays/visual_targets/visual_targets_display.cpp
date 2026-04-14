@@ -123,6 +123,46 @@ void VisualTargetsDisplay::reset()
   }
 }
 
+void VisualTargetsDisplay::update(float wall_dt, float ros_dt)
+{
+  (void)wall_dt;
+  (void)ros_dt;
+
+  if (!server_) {
+    return;
+  }
+
+  auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
+  if (!ros_node_abstraction) {
+    return;
+  }
+
+  auto node = ros_node_abstraction->get_raw_node();
+  const rclcpp::Time now = node->get_clock()->now();
+
+  TargetList targets_snapshot;
+  bool changed = false;
+
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    const auto size_before = targets_.size();
+    pruneStaleTargetsLocked(now);
+    changed = (targets_.size() != size_before);
+
+    if (changed) {
+      targets_snapshot = snapshotTargetsLocked();
+    }
+  }
+
+  if (changed) {
+    rebuildInteractiveMarkers(targets_snapshot);
+    setStatus(
+      rviz_common::properties::StatusProperty::Ok,
+      "Targets",
+      QString("Tracking %1 target(s).").arg(static_cast<int>(targets_snapshot.size())));
+  }
+}
+
 void VisualTargetsDisplay::processMessage(VisualTargets::ConstSharedPtr msg)
 {
   if (!msg || !server_) {

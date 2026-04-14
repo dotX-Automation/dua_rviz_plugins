@@ -137,6 +137,11 @@ protected:
   void reset() override;
 
   /**
+   * @brief Update the display at each frame.
+   */
+  void update(float wall_dt, float ros_dt) override;
+
+  /**
    * @brief Process the received message.
    */
   void processMessage(VisualTargets::ConstSharedPtr msg) override;
