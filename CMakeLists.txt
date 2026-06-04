@@ -25,6 +25,8 @@ find_package(pluginlib REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Widgets Core Gui Network)
 find_package(rviz_common REQUIRED)
 find_package(rviz_default_plugins REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -91,6 +93,8 @@ ament_target_dependencies(dua_rviz_plugins
   rviz_common
   rviz_default_plugins
   rviz_rendering
+  geometry_msgs
+  nav_msgs
   sensor_msgs
   visualization_msgs
   tf2
