@@ -97,6 +97,13 @@ void AttitudeIndicatorDisplay::update(float, float)
   if (auto * rp = context_->getViewManager()->getRenderPanel()) {
     overlay_->setAnchorRect(QRect(rp->mapToGlobal(QPoint(0, 0)), rp->size()));
   }
+
+  double r, p, y;
+  {
+    std::lock_guard<std::mutex> lk(angles_mutex_);
+    r = roll_; p = pitch_; y = yaw_;
+  }
+  overlay_->setAngles(y, p, r);
 }
 
 void AttitudeIndicatorDisplay::ensureOverlay()
@@ -220,14 +227,8 @@ void AttitudeIndicatorDisplay::processQuaternion(double x, double y, double z, d
     tf2::Matrix3x3(tq).getRPY(r, p, y_val);
   }
 
-  {
-    std::lock_guard<std::mutex> lk(angles_mutex_);
-    roll_ = r; pitch_ = p; yaw_ = y_val;
-  }
-
-  if (overlay_) {
-    overlay_->setAngles(y_val, p, r);
-  }
+  std::lock_guard<std::mutex> lk(angles_mutex_);
+  roll_ = r; pitch_ = p; yaw_ = y_val;
 }
 
 void AttitudeIndicatorDisplay::cbImu(sensor_msgs::msg::Imu::ConstSharedPtr msg)
