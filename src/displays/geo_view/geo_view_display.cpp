@@ -16,9 +16,11 @@
 #include <OgreImage.h>
 #include <OgreMaterialManager.h>
 #include <OgrePass.h>
+#include <OgreSceneManager.h>
 #include <OgreTechnique.h>
 #include <OgreTextureManager.h>
 
+#include <rviz_common/display_context.hpp>
 #include <rviz_common/uniform_string_stream.hpp>
 #include <dua_rviz_plugins/displays/geo_view/geo_view_display.hpp>
 
@@ -57,21 +59,27 @@ std::string GeoViewDisplay::keyFor(const Tile & t)
 // ------ ctor/dtor ------
 GeoViewDisplay::GeoViewDisplay()
 {
+  prop_topic_ = new rviz_common::properties::RosTopicProperty(
+    "Topic", "/fix",
+    "sensor_msgs/msg/NavSatFix",
+    "NavSatFix topic to subscribe to (no TF required).", this,
+    SLOT(updateTopic()), this);
+
   prop_source_type_ = new rviz_common::properties::EnumProperty(
-    "Source Type", "XYZ", "Select between XYZ (online) or MBTiles (offline).", this);
-  prop_source_type_->addOption("XYZ", 0);
-  prop_source_type_->addOption("MBTiles", 1);
+    "Source Type", "MBTiles", "Select between MBTiles (offline) or XYZ (online).", this);
+  prop_source_type_->addOption("MBTiles", 0);
+  prop_source_type_->addOption("XYZ", 1);
 
   prop_xyz_url_ = new rviz_common::properties::StringProperty(
     "XYZ URL",
-      "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      "URL template for the tile provider.", this);
+    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    "URL template for the tile provider.", this);
 
   prop_mbtiles_path_ = new rviz_common::properties::StringProperty(
     "MBTiles Path", "", "Path to the MBTiles file to use as a tile source.", this);
 
-  prop_zoom_ = new rviz_common::properties::IntProperty("Zoom Level", 17, "Zoom level.", this);
-  prop_zoom_->setMin(1); prop_zoom_->setMax(20);
+  prop_zoom_ = new rviz_common::properties::IntProperty("Zoom Level", 19, "Zoom level.", this);
+  prop_zoom_->setMin(9); prop_zoom_->setMax(19);
 
   prop_radius_ = new rviz_common::properties::IntProperty(
     "Radius", 1, "Number of tiles around the GPS fix to display.", this);
@@ -98,32 +106,52 @@ GeoViewDisplay::~GeoViewDisplay()
     sqlite3_close(mbtiles_db_);
     mbtiles_db_ = nullptr;
   }
+  if (net_) {
+    net_->deleteLater();
+    net_ = nullptr;
+  }
 }
 
 // ------ rviz lifecycle ------
 void GeoViewDisplay::onInitialize()
 {
-  rviz_common::MessageFilterDisplay<NavSatFix>::onInitialize();
+  rviz_common::Display::onInitialize();
 
-  net_ = std::make_unique<QNetworkAccessManager>(this);
+  prop_topic_->initialize(context_->getRosNodeAbstraction());
 
-  // Disk cache to keep things snappy
-  auto *cache = new QNetworkDiskCache(this);
-  auto dir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-  cache->setCacheDirectory(dir + "/geo_view_tiles");
-  cache->setMaximumCacheSize(256 * 1024 * 1024); // 256 MB
-  net_->setCache(cache);
-
-  // Scene node for our tiles
   Ogre::SceneManager * sm = context_->getSceneManager();
   Ogre::SceneNode * root = sm->getRootSceneNode();
   rviz_common::UniformStringStream ss; ss << "GeoViewNode" << this;
   scene_node_ = root->createChildSceneNode(ss.str());
 }
 
+void GeoViewDisplay::onEnable()
+{
+  scene_node_->setVisible(true);
+  updateTopic();
+}
+
+void GeoViewDisplay::onDisable()
+{
+  scene_node_->setVisible(false);
+  sub_.reset();
+  cancelAllPending();
+}
+
+void GeoViewDisplay::updateTopic()
+{
+  sub_.reset();
+  if (!isEnabled()) {return;}
+  auto node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+  sub_ = node->create_subscription<NavSatFix>(
+    prop_topic_->getTopicStd(),
+    rclcpp::SensorDataQoS(),
+    [this](NavSatFix::ConstSharedPtr msg) {onMessage(msg);});
+}
+
 void GeoViewDisplay::reset()
 {
-  rviz_common::MessageFilterDisplay<NavSatFix>::reset();
+  rviz_common::Display::reset();
   cancelAllPending();
   have_texture_.clear();
   destroyAllVisuals();
@@ -131,23 +159,42 @@ void GeoViewDisplay::reset()
   last_center_ = {};
 }
 
+// ------ lazy network manager ------
+QNetworkAccessManager * GeoViewDisplay::ensureNet()
+{
+  if (!net_) {
+    net_ = new QNetworkAccessManager(this);
+    auto * cache = new QNetworkDiskCache(this);
+    auto dir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    cache->setCacheDirectory(dir + "/geo_view_tiles");
+    cache->setMaximumCacheSize(256 * 1024 * 1024);
+    net_->setCache(cache);
+  }
+  return net_;
+}
+
 // ------ tile IO ------
 bool GeoViewDisplay::ensureMbtilesOpen(const std::string & path)
 {
-  if (!mbtiles_db_) {
-    if (path.empty()) {return false;}
-    if (sqlite3_open(path.c_str(), &mbtiles_db_) != SQLITE_OK) {
-      RVIZ_COMMON_LOG_ERROR_STREAM("MBTiles open failed: " << sqlite3_errmsg(mbtiles_db_));
-      sqlite3_close(mbtiles_db_);
-      mbtiles_db_ = nullptr;
-      return false;
-    }
+  if (mbtiles_db_ && mbtiles_path_opened_ == path) {return true;}
+  // Path changed or first open — (re)open
+  if (mbtiles_db_) {
+    sqlite3_close(mbtiles_db_);
+    mbtiles_db_ = nullptr;
+    mbtiles_path_opened_.clear();
   }
+  if (path.empty()) {return false;}
+  if (sqlite3_open_v2(path.c_str(), &mbtiles_db_, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK) {
+    RVIZ_COMMON_LOG_ERROR_STREAM("MBTiles open failed: " << sqlite3_errmsg(mbtiles_db_));
+    sqlite3_close(mbtiles_db_);
+    mbtiles_db_ = nullptr;
+    return false;
+  }
+  mbtiles_path_opened_ = path;
   return true;
 }
 
-// Fast path: try to return from network disk cache synchronously.
-// If not in cache (or network required), return false (async path will take over).
+// Synchronous path: returns true only when tile is served from disk cache.
 bool GeoViewDisplay::loadTileXYZ(const Tile & t, QImage & out)
 {
   QString url_tmpl = QString::fromStdString(prop_xyz_url_->getStdString());
@@ -158,8 +205,7 @@ bool GeoViewDisplay::loadTileXYZ(const Tile & t, QImage & out)
   QNetworkRequest req{QUrl(url_tmpl)};
   req.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
 
-  // synchronous only to hit cache quickly
-  QNetworkReply * r = net_->get(req);
+  QNetworkReply * r = ensureNet()->get(req);
   QEventLoop loop;
   QObject::connect(r, &QNetworkReply::finished, &loop, &QEventLoop::quit);
   loop.exec();
@@ -215,9 +261,7 @@ GeoViewDisplay::TileVisual & GeoViewDisplay::getOrCreateVisual(const std::string
   auto it = visuals_.find(key);
   if (it != visuals_.end()) {return it->second;}
 
-  // Create quad and material for this tile
   TileVisual vis;
-  // material
   rviz_common::UniformStringStream ms; ms << "GeoViewMaterial_" << key;
   vis.material = Ogre::MaterialManager::getSingleton().create(
     ms.str(), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
@@ -228,7 +272,6 @@ GeoViewDisplay::TileVisual & GeoViewDisplay::getOrCreateVisual(const std::string
   vis.material->getTechnique(0)->getPass(0)->setDepthWriteEnabled(false);
   vis.material->getTechnique(0)->getPass(0)->setSceneBlending(Ogre::SBT_TRANSPARENT_ALPHA);
 
-  // quad
   rviz_common::UniformStringStream qs; qs << "GeoViewQuad_" << key;
   vis.quad = context_->getSceneManager()->createManualObject(qs.str());
   vis.quad->setDynamic(true);
@@ -263,12 +306,8 @@ void GeoViewDisplay::destroyAllVisuals()
 {
   std::vector<std::string> keys;
   keys.reserve(visuals_.size());
-  for (auto & kv : visuals_) {
-    keys.push_back(kv.first);
-  }
-  for (auto & k : keys) {
-    destroyVisual(k);
-  }
+  for (auto & kv : visuals_) {keys.push_back(kv.first);}
+  for (auto & k : keys) {destroyVisual(k);}
 }
 
 void GeoViewDisplay::cancelAllPending()
@@ -289,7 +328,6 @@ bool GeoViewDisplay::uploadToOgre(
   const int w = copy.width(), h = copy.height();
   ogre_img.loadDynamicImage(copy.bits(), w, h, 1, Ogre::PF_A8B8G8R8, false /*autoDelete*/);
 
-  // Remove old texture (if any), then load
   if (vis.texture) {
     Ogre::TextureManager::getSingleton().remove(vis.texture->getName());
     vis.texture.reset();
@@ -299,7 +337,6 @@ bool GeoViewDisplay::uploadToOgre(
   vis.texture = Ogre::TextureManager::getSingleton().loadImage(
     tex_name, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, ogre_img);
 
-  // Bind into material
   Ogre::Pass * pass = vis.material->getTechnique(0)->getPass(0);
   pass->removeAllTextureUnitStates();
   Ogre::TextureUnitState * tus = pass->createTextureUnitState(vis.texture->getName());
@@ -313,7 +350,6 @@ void GeoViewDisplay::createOrUpdateQuad(
 {
   const float half = static_cast<float>(tile_meters * 0.5);
 
-  // material states per tile
   Ogre::Pass * pass = vis.material->getTechnique(0)->getPass(0);
   pass->setDepthWriteEnabled(!draw_behind ? true : false);
   pass->setAlphaRejectSettings(Ogre::CMPF_ALWAYS_PASS, 0);
@@ -324,7 +360,6 @@ void GeoViewDisplay::createOrUpdateQuad(
   vis.quad->clear();
   vis.quad->begin(vis.material->getName(), Ogre::RenderOperation::OT_TRIANGLE_LIST);
 
-  // Quad vertices in XY plane at z=0, translated by offsets
   const float ox = offset_x_m;
   const float oy = offset_y_m;
 
@@ -340,7 +375,7 @@ void GeoViewDisplay::createOrUpdateQuad(
 }
 
 // ------ main message handler ------
-void GeoViewDisplay::processMessage(NavSatFix::ConstSharedPtr msg)
+void GeoViewDisplay::onMessage(NavSatFix::ConstSharedPtr msg)
 {
   if (!isEnabled()) {return;}
 
@@ -376,15 +411,14 @@ void GeoViewDisplay::processMessage(NavSatFix::ConstSharedPtr msg)
     return;
   }
 
-  // record state
   last_center_ = center; last_z_ = z; last_r_ = r; last_src_ = src;
 
   std::unordered_set<std::string> alive;
   alive.reserve((2 * r + 1) * (2 * r + 1));
 
-  // async launcher for XYZ
-  auto start_async_xyz = [&](const Tile & t, const std::string & key){
-      if (pending_.count(key)) {return;} // already in flight
+  // Async launcher for XYZ source
+  auto start_async_xyz = [&](const Tile & t, const std::string & key) {
+      if (pending_.count(key)) {return;}
       QString url = QString::fromStdString(prop_xyz_url_->getStdString());
       url.replace("{z}", QString::number(t.z));
       url.replace("{x}", QString::number(t.x));
@@ -392,7 +426,7 @@ void GeoViewDisplay::processMessage(NavSatFix::ConstSharedPtr msg)
 
       QNetworkRequest req{QUrl(url)};
       req.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-      auto *reply = net_->get(req);
+      auto * reply = ensureNet()->get(req);
       pending_[key] = reply;
 
       QObject::connect(reply, &QNetworkReply::finished, this, [this, reply, key]() {
@@ -409,20 +443,17 @@ void GeoViewDisplay::processMessage(NavSatFix::ConstSharedPtr msg)
           if (it == visuals_.end()) {return;}
           uploadToOgre(img, it->second, key);
           have_texture_.insert(key);
-      // geometry will be positioned on the next processMessage()
-    });
-    };
+          // geometry will be positioned on the next onMessage()
+      });
+  };
 
   // Build a grid of tiles (2r+1)^2
   for (int dy = -r; dy <= r; ++dy) {
     for (int dx = -r; dx <= r; ++dx) {
       Tile t{z, center.x + dx, center.y + dy};
 
-      // Wrap X (world repeats east-west)
       if (t.x < 0) {t.x = (t.x % n + n) % n;}
       if (t.x >= n) {t.x = t.x % n;}
-
-      // Clamp Y (no wrap north-south)
       if (t.y < 0) {t.y = 0;}
       if (t.y >= n) {t.y = n - 1;}
 
@@ -431,7 +462,6 @@ void GeoViewDisplay::processMessage(NavSatFix::ConstSharedPtr msg)
 
       TileVisual & vis = getOrCreateVisual(key);
 
-      // If we already have a texture, just position/update quad
       if (have_texture_.count(key)) {
         const float off_x = static_cast<float>(dx * tile_m);
         const float off_y = static_cast<float>(-dy * tile_m);
@@ -439,25 +469,22 @@ void GeoViewDisplay::processMessage(NavSatFix::ConstSharedPtr msg)
         continue;
       }
 
-      // Try fast path: cache for XYZ, local DB for MBTiles
       QImage img;
       bool ok = false;
       if (src == 0) {
-        ok = loadTileXYZ(t, img);  // returns true only if served from disk cache
+        ok = loadTileXYZ(t, img);
         if (!ok) {
-          // queue async fetch; we'll upload when it completes
           start_async_xyz(t, key);
           continue;
         }
       } else {
-        ok = loadTileMBTiles(t, img); // local DB: synchronous but quick
+        ok = loadTileMBTiles(t, img);
         if (!ok) {
           RVIZ_COMMON_LOG_WARNING_STREAM("MBTiles tile missing for key=" << key);
           continue;
         }
       }
 
-      // upload and place
       uploadToOgre(img, vis, key);
       have_texture_.insert(key);
 

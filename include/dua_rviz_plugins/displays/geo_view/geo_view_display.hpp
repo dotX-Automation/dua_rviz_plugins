@@ -14,12 +14,15 @@
 #include <QtNetwork/QNetworkReply>
 #include <QImage>
 
+#include <rclcpp/rclcpp.hpp>
+
+#include <rviz_common/display.hpp>
 #include <rviz_common/logging.hpp>
-#include <rviz_common/message_filter_display.hpp>
 #include <rviz_common/properties/bool_property.hpp>
 #include <rviz_common/properties/enum_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/int_property.hpp>
+#include <rviz_common/properties/ros_topic_property.hpp>
 #include <rviz_common/properties/string_property.hpp>
 
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
@@ -31,7 +34,7 @@ namespace dua_rviz_plugins::displays::geo_view
 
 using sensor_msgs::msg::NavSatFix;
 
-class GeoViewDisplay : public rviz_common::MessageFilterDisplay<NavSatFix>
+class GeoViewDisplay : public rviz_common::Display
 {
   Q_OBJECT
 
@@ -41,11 +44,20 @@ public:
 
 protected:
   void onInitialize() override;
+  void onEnable() override;
+  void onDisable() override;
   void reset() override;
-  void processMessage(NavSatFix::ConstSharedPtr msg) override;
+
+private Q_SLOTS:
+  void updateTopic();
 
 private:
+  void onMessage(NavSatFix::ConstSharedPtr msg);
+
+  rclcpp::Subscription<NavSatFix>::SharedPtr sub_;
+
   // Properties
+  rviz_common::properties::RosTopicProperty * prop_topic_;
   rviz_common::properties::EnumProperty * prop_source_type_;
   rviz_common::properties::StringProperty * prop_xyz_url_;
   rviz_common::properties::StringProperty * prop_mbtiles_path_;
@@ -67,12 +79,13 @@ private:
   std::unordered_map<std::string, TileVisual> visuals_; // key = "z_x_y"
 
   // Helpers/state
-  std::unique_ptr<QNetworkAccessManager> net_;
+  QNetworkAccessManager * net_ {nullptr};
   sqlite3 * mbtiles_db_ {nullptr};
+  std::string mbtiles_path_opened_;
 
   // Async state
-  std::unordered_map<std::string, QNetworkReply *> pending_;  // key -> reply*
-  std::unordered_set<std::string> have_texture_;             // keys with uploaded texture
+  std::unordered_map<std::string, QNetworkReply *> pending_;
+  std::unordered_set<std::string> have_texture_;
 
   struct Tile { int z{0}, x{0}, y{0}; };
   Tile last_center_{};
@@ -84,6 +97,7 @@ private:
   static double tileMetersAtLat(double lat_deg, int z); // 256px tile width in meters
   static std::string keyFor(const Tile & t);
 
+  QNetworkAccessManager * ensureNet();
   bool ensureMbtilesOpen(const std::string & path);
   bool loadTileXYZ(const Tile & t, QImage & out);
   bool loadTileMBTiles(const Tile & t, QImage & out);
