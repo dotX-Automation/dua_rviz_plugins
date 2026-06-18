@@ -41,6 +41,16 @@ GeoViewDisplay::Tile GeoViewDisplay::latLonToTile(double lat_deg, double lon_deg
   return {z, x, y};
 }
 
+void GeoViewDisplay::latLonToTileFrac(
+  double lat_deg, double lon_deg, int z,
+  double & fx, double & fy)
+{
+  const double lat_rad = lat_deg * M_PI / 180.0;
+  const double n = std::pow(2.0, z);
+  fx = (lon_deg + 180.0) / 360.0 * n;
+  fy = (1.0 - std::log(std::tan(lat_rad) + 1.0 / std::cos(lat_rad)) / M_PI) / 2.0 * n;
+}
+
 double GeoViewDisplay::tileMetersAtLat(double lat_deg, int z)
 {
   const double earth_circum = 40075016.68557849;
@@ -306,8 +316,12 @@ void GeoViewDisplay::destroyAllVisuals()
 {
   std::vector<std::string> keys;
   keys.reserve(visuals_.size());
-  for (auto & kv : visuals_) {keys.push_back(kv.first);}
-  for (auto & k : keys) {destroyVisual(k);}
+  for (auto & kv : visuals_) {
+    keys.push_back(kv.first);
+  }
+  for (auto & k : keys) {
+    destroyVisual(k);
+  }
 }
 
 void GeoViewDisplay::cancelAllPending()
@@ -389,6 +403,13 @@ void GeoViewDisplay::onMessage(NavSatFix::ConstSharedPtr msg)
   const double tile_m = tileMetersAtLat(msg->latitude, z);
   const int n = static_cast<int>(std::pow(2.0, z));
 
+  double fx, fy;
+  latLonToTileFrac(msg->latitude, msg->longitude, z, fx, fy);
+  const double frac_x = fx - std::floor(fx);
+  const double frac_y = fy - std::floor(fy);
+  fix_dx_m_ = (0.5 - frac_x) * tile_m;
+  fix_dy_m_ = (frac_y - 0.5) * tile_m;
+
   const bool tiling_changed = (
     z != last_z_ || r != last_r_ || src != last_src_ ||
     center.x != last_center_.x || center.y != last_center_.y || center.z != last_center_.z);
@@ -403,8 +424,8 @@ void GeoViewDisplay::onMessage(NavSatFix::ConstSharedPtr msg)
         const std::string key = keyFor(t);
         auto it = visuals_.find(key);
         if (it == visuals_.end()) {continue;}
-        const float off_x = static_cast<float>(dx * tile_m);
-        const float off_y = static_cast<float>(-dy * tile_m);
+        const float off_x = static_cast<float>(dx * tile_m + fix_dx_m_);
+        const float off_y = static_cast<float>(-dy * tile_m + fix_dy_m_);
         createOrUpdateQuad(it->second, tile_m, opacity, draw_behind, off_x, off_y);
       }
     }
@@ -445,7 +466,7 @@ void GeoViewDisplay::onMessage(NavSatFix::ConstSharedPtr msg)
           have_texture_.insert(key);
           // geometry will be positioned on the next onMessage()
       });
-  };
+    };
 
   // Build a grid of tiles (2r+1)^2
   for (int dy = -r; dy <= r; ++dy) {
@@ -463,8 +484,8 @@ void GeoViewDisplay::onMessage(NavSatFix::ConstSharedPtr msg)
       TileVisual & vis = getOrCreateVisual(key);
 
       if (have_texture_.count(key)) {
-        const float off_x = static_cast<float>(dx * tile_m);
-        const float off_y = static_cast<float>(-dy * tile_m);
+        const float off_x = static_cast<float>(dx * tile_m + fix_dx_m_);
+        const float off_y = static_cast<float>(-dy * tile_m + fix_dy_m_);
         createOrUpdateQuad(vis, tile_m, opacity, draw_behind, off_x, off_y);
         continue;
       }
@@ -488,8 +509,8 @@ void GeoViewDisplay::onMessage(NavSatFix::ConstSharedPtr msg)
       uploadToOgre(img, vis, key);
       have_texture_.insert(key);
 
-      const float off_x = static_cast<float>(dx * tile_m);
-      const float off_y = static_cast<float>(-dy * tile_m);
+      const float off_x = static_cast<float>(dx * tile_m + fix_dx_m_);
+      const float off_y = static_cast<float>(-dy * tile_m + fix_dy_m_);
       createOrUpdateQuad(vis, tile_m, opacity, draw_behind, off_x, off_y);
     }
   }

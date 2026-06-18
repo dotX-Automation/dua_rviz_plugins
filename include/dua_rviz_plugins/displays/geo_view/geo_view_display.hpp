@@ -89,11 +89,16 @@ private:
 
   struct Tile { int z{0}, x{0}, y{0}; };
   Tile last_center_{};
+  double fix_dx_m_{0.0};
+  double fix_dy_m_{0.0};
   int  last_z_{-1};
   int  last_r_{-1};
   int  last_src_{-1};
 
   static Tile latLonToTile(double lat_deg, double lon_deg, int z);
+  static void latLonToTileFrac(
+    double lat_deg, double lon_deg, int z,
+    double & fx, double & fy);
   static double tileMetersAtLat(double lat_deg, int z); // 256px tile width in meters
   static std::string keyFor(const Tile & t);
 
